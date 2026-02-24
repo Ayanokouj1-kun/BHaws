@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import MaintenancePage from "./pages/MaintenancePage";
 import ExpensesPage from "./pages/ExpensesPage";
 import LoginPage from "./pages/LoginPage";
+import BoarderSignupPage from "./pages/BoarderSignupPage";
 import NotFound from "./pages/NotFound";
 
 import { DataProvider } from "@/context/DataContext";
@@ -40,6 +41,8 @@ const App = () => (
             <Route path="/" element={<LoginPage />} />
             {/* Keep /login as an alias for backwards compatibility */}
             <Route path="/login" element={<LoginPage />} />
+            {/* Boarder self-signup */}
+            <Route path="/signup" element={<BoarderSignupPage />} />
             {/* Dashboard is now a protected route at /dashboard */}
             <Route
               path="/dashboard"
