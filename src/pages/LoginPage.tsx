@@ -42,8 +42,8 @@ const LoginPage = () => {
             <div className="w-full max-w-[360px] relative z-10 space-y-5 animate-in fade-in zoom-in duration-500">
                 {/* Compact Brand Header */}
                 <div className="flex flex-col items-center space-y-3">
-                    <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200/40 border border-slate-100">
-                        <Building2 className="h-6 w-6 text-accent" />
+                    <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
+                        <img src="/logo.png" alt="BoardHub Logo" className="h-full w-full object-cover" />
                     </div>
                     <div className="text-center">
                         <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">BoardHub</h1>
