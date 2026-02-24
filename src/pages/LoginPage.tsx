@@ -17,7 +17,7 @@ const LoginPage = () => {
     // Redirect if already logged in
     useEffect(() => {
         if (user) {
-            navigate("/", { replace: true });
+            navigate("/dashboard", { replace: true });
         }
     }, [user, navigate]);
 
@@ -26,7 +26,7 @@ const LoginPage = () => {
         const success = await login(username, password);
         if (success) {
             toast.success("Welcome back!");
-            navigate("/");
+            navigate("/dashboard");
         } else {
             toast.error("Invalid credentials.");
         }

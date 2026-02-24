@@ -30,7 +30,7 @@ export function AppSidebar() {
   const role = user?.role || "Boarder";
 
   const mainItems = [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Rooms", url: "/rooms", icon: DoorOpen, roles: ["Admin", "Staff"] },
     { title: "Boarders", url: "/boarders", icon: Users, roles: ["Admin", "Staff"] },
     { title: "My Profile", url: `/boarders/${user?.boarderId}`, icon: UserIcon, roles: ["Boarder"] },
@@ -66,12 +66,12 @@ export function AppSidebar() {
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
-                    >
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/dashboard"}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
+                      >
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>

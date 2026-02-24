@@ -23,11 +23,8 @@ import { DataProvider } from "@/context/DataContext";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useData();
-
-  if (isLoading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-
+  const { user } = useData();
+  if (!user) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -39,8 +36,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Login as landing page */}
+            <Route path="/" element={<LoginPage />} />
+            {/* Keep /login as an alias for backwards compatibility */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            {/* Dashboard is now a protected route at /dashboard */}
+            <Route
+              path="/dashboard"
+              element={(
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              )}
+            />
             <Route path="/rooms" element={<ProtectedRoute><RoomsPage /></ProtectedRoute>} />
             <Route path="/rooms/:id" element={<ProtectedRoute><RoomDetails /></ProtectedRoute>} />
             <Route path="/boarders" element={<ProtectedRoute><BoardersPage /></ProtectedRoute>} />

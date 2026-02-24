@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { Room, Boarder, Payment, AuditLog, BhSettings, MaintenanceRequest, Expense, Announcement, User } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -52,6 +52,13 @@ const DEFAULT_SETTINGS: BhSettings = {
     gracePeriodDays: 5,
 };
 
+// Built-in fallback users — always works even without Supabase
+const MOCK_USERS = [
+    { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" as const },
+    { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" as const },
+    { id: "u3", username: "boarder", fullName: "Juan Dela Cruz", role: "Boarder" as const, boarderId: "bo1" },
+];
+
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
@@ -64,438 +71,335 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    // Start as FALSE so the login page shows immediately
+    const [isLoading, setIsLoading] = useState(false);
 
-    const refreshData = useCallback(async () => {
-        console.log("🔄 Synchronizing with BoardHub Cloud...");
-        try {
-            // 1. Initial Identity Check
-            const savedUser = localStorage.getItem("bh_user");
-            if (savedUser) {
-                try {
-                    setUser(JSON.parse(savedUser));
-                } catch (e) {
-                    console.error("Malformed session data, clearing...", e);
-                    localStorage.removeItem("bh_user");
-                }
+    // --- SESSION RECOVERY (runs once at mount, synchronously from localStorage) ---
+    useEffect(() => {
+        const saved = localStorage.getItem("bh_user");
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed?.id && parsed?.role) setUser(parsed);
+            } catch {
+                localStorage.removeItem("bh_user");
             }
+        }
+    }, []);
 
-            // 2. Fetch Core Modules (Sequential with error boundaries)
-            const fetchTable = async (table: string, query = '*') => {
-                const { data, error } = await supabase.from(table).select(query);
-                if (error) {
-                    console.warn(`⚠️ Table [${table}] not found or inaccessible:`, error.message);
-                    return null;
-                }
+    // --- BACKGROUND CLOUD SYNC (never blocks the UI) ---
+    const refreshData = useCallback(async () => {
+        try {
+            const safe = async (table: string, query = "*") => {
+                const { data, error } = await (supabase.from(table) as any).select(query);
+                if (error) { console.warn(`[Sync] ${table}:`, error.message); return null; }
                 return data;
             };
 
-            const [
-                roomsRaw, boardersRaw, paymentsRaw, logsRaw,
-                settingsRaw, maintenanceRaw, expensesRaw, announcementsRaw
-            ] = await Promise.all([
-                supabase.from('rooms').select('*, beds(*)'),
-                fetchTable('boarders'),
-                fetchTable('payments'),
-                supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }),
-                supabase.from('settings').select('*').eq('id', 1).single(),
-                fetchTable('maintenance_requests'),
-                fetchTable('expenses'),
-                fetchTable('announcements')
-            ]);
+            const [roomsRes, boardersRes, paymentsRes, logsRes, settingsRes, maintRes, expRes, annRes] =
+                await Promise.all([
+                    supabase.from("rooms").select("*, beds(*)"),
+                    safe("boarders"),
+                    safe("payments"),
+                    supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
+                    supabase.from("settings").select("*").eq("id", 1).single(),
+                    safe("maintenance_requests"),
+                    safe("expenses"),
+                    safe("announcements"),
+                ]);
 
-            // 3. Transform and Map Data
-            if (roomsRaw.data) setRooms(roomsRaw.data.map((r: any) => ({
-                ...r,
-                monthlyRate: parseFloat(r.monthly_rate) || 0,
-                createdAt: r.created_at,
-                updatedAt: r.updated_at,
-                // Map inner beds
-                beds: (r.beds || []).map((b: any) => ({
-                    ...b,
-                    roomId: b.room_id,
-                    boarderId: b.boarder_id
-                }))
+            if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => ({
+                ...r, monthlyRate: parseFloat(r.monthly_rate) || 0,
+                createdAt: r.created_at, updatedAt: r.updated_at,
+                beds: (r.beds || []).map((b: any) => ({ ...b, roomId: b.room_id, boarderId: b.boarder_id }))
             })));
 
-            if (boardersRaw) setBoarders(boardersRaw.map((b: any) => ({
-                ...b,
-                fullName: b.full_name,
-                contactNumber: b.contact_number,
-                emergencyContact: b.emergency_contact,
-                assignedRoomId: b.assigned_room_id,
-                assignedBedId: b.assigned_bed_id,
-                moveInDate: b.move_in_date,
-                moveOutDate: b.move_out_date,
-                advanceAmount: parseFloat(b.advance_amount) || 0,
-                depositAmount: parseFloat(b.deposit_amount) || 0,
-                profilePhoto: b.profile_photo,
+            if (boardersRes) setBoarders(boardersRes.map((b: any) => ({
+                ...b, fullName: b.full_name, contactNumber: b.contact_number,
+                emergencyContact: b.emergency_contact, assignedRoomId: b.assigned_room_id,
+                assignedBedId: b.assigned_bed_id, moveInDate: b.move_in_date,
+                moveOutDate: b.move_out_date, advanceAmount: parseFloat(b.advance_amount) || 0,
+                depositAmount: parseFloat(b.deposit_amount) || 0, profilePhoto: b.profile_photo,
                 createdAt: b.created_at
             })));
 
-            if (paymentsRaw) setPayments(paymentsRaw.map((p: any) => ({
-                ...p,
-                boarderId: p.boarder_id,
-                paidDate: p.paid_date,
-                dueDate: p.due_date,
-                lateFee: parseFloat(p.late_fee) || 0,
-                receiptNumber: p.receipt_number,
-                createdAt: p.created_at
+            if (paymentsRes) setPayments(paymentsRes.map((p: any) => ({
+                ...p, boarderId: p.boarder_id, paidDate: p.paid_date, dueDate: p.due_date,
+                lateFee: parseFloat(p.late_fee) || 0, receiptNumber: p.receipt_number, createdAt: p.created_at
             })));
 
-            if (logsRaw) setAuditLogs(logsRaw.map((l: any) => ({
-                ...l,
-                entityId: l.entity_id,
-                performedBy: l.performed_by
+            if (logsRes?.data) setAuditLogs(logsRes.data.map((l: any) => ({
+                ...l, entityId: l.entity_id, performedBy: l.performed_by
             })));
 
-            if (settingsRaw.data) {
-                const s = settingsRaw.data;
+            if (settingsRes?.data) {
+                const s = settingsRes.data;
                 setSettings({
-                    ...s,
-                    ownerName: s.owner_name,
-                    lateFeeEnabled: s.late_fee_enabled,
-                    lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
-                    gracePeriodDays: s.grace_period_days || 0
+                    ...s, ownerName: s.owner_name, lateFeeEnabled: s.late_fee_enabled,
+                    lateFeeAmount: parseFloat(s.late_fee_amount) || 0, gracePeriodDays: s.grace_period_days || 0
                 });
             }
 
-            if (maintenanceRaw) setMaintenance(maintenanceRaw.map((m: any) => ({
-                ...m,
-                roomId: m.room_id,
-                boarderId: m.boarder_id,
-                createdAt: m.created_at,
-                resolvedAt: m.resolved_at
+            if (maintRes) setMaintenance(maintRes.map((m: any) => ({
+                ...m, roomId: m.room_id, boarderId: m.boarder_id, createdAt: m.created_at, resolvedAt: m.resolved_at
             })));
+            if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
+            if (annRes) setAnnouncements(annRes.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
 
-            if (expensesRaw) setExpenses(expensesRaw.map((e: any) => ({
-                ...e,
-                paidBy: e.paid_by,
-                receiptRef: e.receipt_ref
-            })));
-
-            if (announcementsRaw) setAnnouncements(announcementsRaw.map((a: any) => ({
-                ...a,
-                createdAt: a.created_at,
-                expiresAt: a.expires_at
-            })));
-
-            console.log("✅ Cloud Sync Complete.");
+            console.log("✅ BoardHub: Cloud sync complete.");
         } catch (err) {
-            console.error("Critical error during cloud sync:", err);
-        } finally {
-            setIsLoading(false);
+            console.error("Cloud sync error:", err);
         }
-    }, [supabase]);
+    }, []);
 
+    // Kick off cloud sync in background after mount
     useEffect(() => {
         refreshData();
     }, [refreshData]);
 
+    // --- LOGIN ---
     const login = async (username: string, password: string): Promise<boolean> => {
+        const lc = username.toLowerCase().trim();
+
+        // 1. Always try the built-in mock users first for reliability
+        const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
+        if (mock) {
+            setUser(mock as any);
+            localStorage.setItem("bh_user", JSON.stringify(mock));
+            // Trigger background sync after login
+            refreshData();
+            return true;
+        }
+
+        // 2. Try Supabase profiles table
         try {
             const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('username', username.toLowerCase())
-                .single();
-
-            if (error || !profile) {
-                // Fallback for demo: allows login even if DB query fails but credentials match mock
-                const MOCK_USERS = [
-                    { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" },
-                    { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" },
-                    { id: "u3", username: "boarder", fullName: "Juan Dela Cruz", role: "Boarder", boarderId: "bo1" },
-                ];
-                const foundMock = MOCK_USERS.find(u => u.username === username.toLowerCase() && password === username);
-                if (foundMock) {
-                    setUser(foundMock as any);
-                    localStorage.setItem("bh_user", JSON.stringify(foundMock));
-                    return true;
-                }
-                return false;
-            }
-
-            // Simple Password Check: Password must match Username exactly
-            if (password === username) {
+                .from("profiles").select("*").eq("username", lc).single();
+            if (!error && profile && password === lc) {
                 const u = {
-                    id: profile.id,
-                    username: profile.username,
-                    fullName: profile.full_name,
-                    role: profile.role,
-                    boarderId: profile.boarder_id
+                    id: profile.id, username: profile.username,
+                    fullName: profile.full_name, role: profile.role, boarderId: profile.boarder_id
                 };
                 setUser(u as any);
                 localStorage.setItem("bh_user", JSON.stringify(u));
+                refreshData();
                 return true;
             }
-            return false;
-        } catch (err) {
-            console.error("Login exception:", err);
-            return false;
+        } catch (e) {
+            console.warn("Profile lookup failed, mock used as fallback:", e);
         }
+
+        return false;
     };
 
+    // --- LOGOUT ---
     const logout = async () => {
         setUser(null);
         localStorage.removeItem("bh_user");
-        await supabase.auth.signOut();
+        try { await supabase.auth.signOut(); } catch { /* ignore */ }
     };
 
+    // --- AUDIT LOG ---
     const addLog = async (action: string, entity: string, entityId: string, details: string) => {
-        const logData = {
-            action,
-            entity,
-            entity_id: entityId,
-            details,
-            performed_by: user?.fullName || "System"
-        };
-        const { error } = await supabase.from('audit_logs').insert([logData]);
-        if (!error) refreshData();
+        try {
+            await supabase.from("audit_logs").insert([{
+                action, entity, entity_id: entityId, details, performed_by: user?.fullName || "System"
+            }]);
+            refreshData();
+        } catch { /* non-blocking */ }
     };
 
+    // --- ROOMS ---
     const addRoom = async (room: Room) => {
-        const { error } = await supabase.from('rooms').insert([{
-            name: room.name,
-            capacity: room.capacity,
-            monthly_rate: room.monthlyRate,
-            status: room.status,
-            floor: room.floor,
-            amenities: room.amenities,
-            description: room.description
-        }]);
-        if (error) toast.error("Failed to add room");
-        else {
-            toast.success("Room added successfully");
-            addLog("Room Added", "Room", room.id, `Room ${room.name} was added.`);
-            refreshData();
-        }
-    };
+        const { data: newRoom, error } = await supabase.from("rooms").insert([{
+            name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
+            status: room.status, floor: room.floor, amenities: room.amenities, description: room.description
+        }]).select().single();
 
-    const updateRoom = async (room: Room) => {
-        const { error } = await supabase.from('rooms').update({
-            name: room.name,
-            capacity: room.capacity,
-            monthly_rate: room.monthlyRate,
-            status: room.status,
-            floor: room.floor,
-            amenities: room.amenities,
-            description: room.description
-        }).eq('id', room.id);
-        if (error) toast.error("Failed to update room");
-        else {
-            toast.success("Room updated");
-            addLog("Room Updated", "Room", room.id, `Room ${room.name} details were updated.`);
-            refreshData();
-        }
-    };
+        if (error) { toast.error("Failed to add room: " + error.message); return; }
 
-    const deleteRoom = async (id: string) => {
-        const { error } = await supabase.from('rooms').delete().eq('id', id);
-        if (error) toast.error("Failed to delete room");
-        else {
-            toast.success("Room deleted");
-            addLog("Room Deleted", "Room", id, `Room was removed.`);
-            refreshData();
-        }
-    };
-
-    const addBoarder = async (boarder: Boarder) => {
-        const { error } = await supabase.from('boarders').insert([{
-            full_name: boarder.fullName,
-            contact_number: boarder.contactNumber,
-            email: boarder.email,
-            address: boarder.address,
-            emergency_contact: boarder.emergencyContact,
-            assigned_room_id: boarder.assignedRoomId,
-            assigned_bed_id: boarder.assignedBedId,
-            move_in_date: boarder.moveInDate,
-            advance_amount: boarder.advanceAmount,
-            deposit_amount: boarder.depositAmount,
-            status: boarder.status,
-            occupation: boarder.occupation
-        }]);
-        if (error) toast.error("Failed to add boarder");
-        else {
-            toast.success("Boarder added");
-            refreshData();
-        }
-    };
-
-    const updateBoarder = async (boarder: Boarder) => {
-        const { error } = await supabase.from('boarders').update({
-            full_name: boarder.fullName,
-            contact_number: boarder.contactNumber,
-            email: boarder.email,
-            address: boarder.address,
-            emergency_contact: boarder.emergencyContact,
-            assigned_room_id: boarder.assignedRoomId,
-            assigned_bed_id: boarder.assignedBedId,
-            status: boarder.status,
-            occupation: boarder.occupation
-        }).eq('id', boarder.id);
-        if (error) toast.error("Failed to update boarder");
-        else {
-            toast.success("Boarder updated");
-            refreshData();
-        }
-    };
-
-    const deleteBoarder = async (id: string) => {
-        const { error } = await supabase.from('boarders').delete().eq('id', id);
-        if (error) toast.error("Failed to remove boarder");
-        else {
-            toast.success("Boarder removed");
-            refreshData();
-        }
-    };
-
-    const addPayment = async (payment: Payment) => {
-        const { error } = await supabase.from('payments').insert([{
-            boarder_id: payment.boarderId,
-            type: payment.type,
-            amount: payment.amount,
-            month: payment.month,
-            due_date: payment.dueDate,
-            status: payment.status,
-            method: payment.method,
-            notes: payment.notes
-        }]);
-        if (error) toast.error("Failed to record payment");
-        else {
-            toast.success("Payment recorded");
-            refreshData();
-        }
-    };
-
-    const updatePayment = async (payment: Payment) => {
-        const { error } = await supabase.from('payments').update({
-            status: payment.status,
-            paid_date: payment.paidDate,
-            method: payment.method,
-            receipt_number: payment.receiptNumber,
-            notes: payment.notes
-        }).eq('id', payment.id);
-        if (error) toast.error("Failed to update payment");
-        else {
-            toast.success("Payment updated");
-            refreshData();
-        }
-    };
-
-    const deletePayment = async (id: string) => {
-        const { error } = await supabase.from('payments').delete().eq('id', id);
-        if (error) toast.error("Failed to delete payment");
-        else {
-            toast.success("Payment deleted");
-            refreshData();
-        }
-    };
-
-    const addMaintenance = async (req: MaintenanceRequest) => {
-        const { error } = await supabase.from('maintenance_requests').insert([{
-            room_id: req.roomId,
-            boarder_id: req.boarderId,
-            title: req.title,
-            description: req.description,
-            priority: req.priority,
-            status: req.status
-        }]);
-        if (error) toast.error("Failed to submit request");
-        else {
-            toast.success("Request submitted");
-            refreshData();
-        }
-    };
-
-    const updateMaintenance = async (req: MaintenanceRequest) => {
-        const { error } = await supabase.from('maintenance_requests').update({
-            status: req.status,
-            priority: req.priority,
-            resolved_at: req.status === 'Resolved' ? new Date().toISOString() : null
-        }).eq('id', req.id);
-        if (error) toast.error("Failed to update status");
-        else {
-            toast.success("Status updated");
-            refreshData();
-        }
-    };
-
-    const deleteMaintenance = async (id: string) => {
-        await supabase.from('maintenance_requests').delete().eq('id', id);
+        const beds = Array.from({ length: room.capacity }, (_, i) => ({
+            room_id: newRoom.id, name: `Bed ${i + 1}`, status: "Available"
+        }));
+        await supabase.from("beds").insert(beds);
+        toast.success("Room added successfully");
+        addLog("Room Added", "Room", newRoom.id, `Room ${room.name} added.`);
         refreshData();
     };
 
+    const updateRoom = async (room: Room) => {
+        const { error } = await supabase.from("rooms").update({
+            name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
+            status: room.status, floor: room.floor, amenities: room.amenities, description: room.description
+        }).eq("id", room.id);
+
+        if (error) { toast.error("Failed to update room"); return; }
+
+        const { data: existingBeds } = await supabase.from("beds").select("*").eq("room_id", room.id);
+        const currentCount = existingBeds?.length || 0;
+        if (room.capacity > currentCount) {
+            const newBeds = Array.from({ length: room.capacity - currentCount }, (_, i) => ({
+                room_id: room.id, name: `Bed ${currentCount + i + 1}`, status: "Available"
+            }));
+            await supabase.from("beds").insert(newBeds);
+        } else if (room.capacity < currentCount) {
+            const toRemove = existingBeds!.slice(room.capacity).map(b => b.id);
+            if (toRemove.length) await supabase.from("beds").delete().in("id", toRemove);
+        }
+        toast.success("Room updated");
+        addLog("Room Updated", "Room", room.id, `Room ${room.name} updated.`);
+        refreshData();
+    };
+
+    const deleteRoom = async (id: string) => {
+        const { error } = await supabase.from("rooms").delete().eq("id", id);
+        if (error) toast.error("Failed to delete room");
+        else { toast.success("Room deleted"); addLog("Room Deleted", "Room", id, "Room removed."); refreshData(); }
+    };
+
+    // --- BOARDERS ---
+    const addBoarder = async (boarder: Boarder) => {
+        const { data: nb, error } = await supabase.from("boarders").insert([{
+            full_name: boarder.fullName, contact_number: boarder.contactNumber, email: boarder.email,
+            address: boarder.address, emergency_contact: boarder.emergencyContact,
+            assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
+            move_in_date: boarder.moveInDate, advance_amount: boarder.advanceAmount,
+            deposit_amount: boarder.depositAmount, status: boarder.status, occupation: boarder.occupation
+        }]).select().single();
+
+        if (error) { toast.error("Failed to add boarder: " + error.message); return; }
+        if (boarder.assignedBedId) {
+            await supabase.from("beds").update({ boarder_id: nb.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
+        }
+        toast.success("Boarder added");
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} registered.`);
+        refreshData();
+    };
+
+    const updateBoarder = async (boarder: Boarder) => {
+        const { data: old } = await supabase.from("boarders").select("assigned_bed_id").eq("id", boarder.id).single();
+        const { error } = await supabase.from("boarders").update({
+            full_name: boarder.fullName, contact_number: boarder.contactNumber, email: boarder.email,
+            address: boarder.address, emergency_contact: boarder.emergencyContact,
+            assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
+            status: boarder.status, occupation: boarder.occupation
+        }).eq("id", boarder.id);
+
+        if (error) { toast.error("Failed to update boarder"); return; }
+        if (old && old.assigned_bed_id !== boarder.assignedBedId) {
+            if (old.assigned_bed_id) await supabase.from("beds").update({ boarder_id: null, status: "Available" }).eq("id", old.assigned_bed_id);
+            if (boarder.assignedBedId) await supabase.from("beds").update({ boarder_id: boarder.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
+        }
+        toast.success("Boarder updated");
+        refreshData();
+    };
+
+    const deleteBoarder = async (id: string) => {
+        const { error } = await supabase.from("boarders").delete().eq("id", id);
+        if (error) toast.error("Failed to remove boarder");
+        else { toast.success("Boarder removed"); refreshData(); }
+    };
+
+    // --- PAYMENTS ---
+    const addPayment = async (payment: Payment) => {
+        const { error } = await supabase.from("payments").insert([{
+            boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
+            month: payment.month, due_date: payment.dueDate, status: payment.status,
+            method: payment.method, notes: payment.notes
+        }]);
+        if (error) toast.error("Failed to record payment");
+        else { toast.success("Payment recorded"); refreshData(); }
+    };
+
+    const updatePayment = async (payment: Payment) => {
+        const { error } = await supabase.from("payments").update({
+            status: payment.status, paid_date: payment.paidDate, method: payment.method,
+            receipt_number: payment.receiptNumber, notes: payment.notes
+        }).eq("id", payment.id);
+        if (error) toast.error("Failed to update payment");
+        else { toast.success("Payment updated"); refreshData(); }
+    };
+
+    const deletePayment = async (id: string) => {
+        const { error } = await supabase.from("payments").delete().eq("id", id);
+        if (error) toast.error("Failed to delete payment");
+        else { toast.success("Payment deleted"); refreshData(); }
+    };
+
+    // --- MAINTENANCE ---
+    const addMaintenance = async (req: MaintenanceRequest) => {
+        const { error } = await supabase.from("maintenance_requests").insert([{
+            room_id: req.roomId, boarder_id: req.boarderId, title: req.title,
+            description: req.description, priority: req.priority, status: req.status
+        }]);
+        if (error) toast.error("Failed to submit request");
+        else { toast.success("Request submitted"); refreshData(); }
+    };
+
+    const updateMaintenance = async (req: MaintenanceRequest) => {
+        const { error } = await supabase.from("maintenance_requests").update({
+            status: req.status, priority: req.priority,
+            resolved_at: req.status === "Resolved" ? new Date().toISOString() : null
+        }).eq("id", req.id);
+        if (error) toast.error("Failed to update status");
+        else { toast.success("Status updated"); refreshData(); }
+    };
+
+    const deleteMaintenance = async (id: string) => {
+        await supabase.from("maintenance_requests").delete().eq("id", id);
+        refreshData();
+    };
+
+    // --- EXPENSES ---
     const addExpense = async (expense: Expense) => {
-        const { error } = await supabase.from('expenses').insert([{
-            category: expense.category,
-            description: expense.description,
-            amount: expense.amount,
-            date: expense.date,
-            paid_by: expense.paidBy
+        const { error } = await supabase.from("expenses").insert([{
+            category: expense.category, description: expense.description,
+            amount: expense.amount, date: expense.date, paid_by: expense.paidBy
         }]);
         if (error) toast.error("Failed to record expense");
-        else {
-            toast.success("Expense recorded");
-            refreshData();
-        }
+        else { toast.success("Expense recorded"); refreshData(); }
     };
 
     const updateExpense = async (expense: Expense) => {
-        await supabase.from('expenses').update({
-            category: expense.category,
-            description: expense.description,
-            amount: expense.amount,
-            date: expense.date,
-            paid_by: expense.paidBy
-        }).eq('id', expense.id);
+        await supabase.from("expenses").update({
+            category: expense.category, description: expense.description,
+            amount: expense.amount, date: expense.date, paid_by: expense.paidBy
+        }).eq("id", expense.id);
         refreshData();
     };
 
     const deleteExpense = async (id: string) => {
-        await supabase.from('expenses').delete().eq('id', id);
+        await supabase.from("expenses").delete().eq("id", id);
         refreshData();
     };
 
+    // --- ANNOUNCEMENTS ---
     const addAnnouncement = async (ann: Announcement) => {
-        await supabase.from('announcements').insert([{
-            title: ann.title,
-            message: ann.message,
-            priority: ann.priority,
-            expires_at: ann.expiresAt
+        await supabase.from("announcements").insert([{
+            title: ann.title, message: ann.message, priority: ann.priority, expires_at: ann.expiresAt
         }]);
         refreshData();
     };
 
     const deleteAnnouncement = async (id: string) => {
-        await supabase.from('announcements').delete().eq('id', id);
+        await supabase.from("announcements").delete().eq("id", id);
         refreshData();
     };
 
+    // --- SETTINGS ---
     const updateSettings = async (newSettings: BhSettings) => {
-        const { error } = await supabase.from('settings').update({
-            name: newSettings.name,
-            address: newSettings.address,
-            contact: newSettings.contact,
-            email: newSettings.email,
-            website: newSettings.website,
-            owner_name: newSettings.ownerName,
-            currency: newSettings.currency,
-            late_fee_enabled: newSettings.lateFeeEnabled,
-            late_fee_amount: newSettings.lateFeeAmount,
-            grace_period_days: newSettings.gracePeriodDays
-        }).eq('id', 1);
-
+        const { error } = await supabase.from("settings").update({
+            name: newSettings.name, address: newSettings.address, contact: newSettings.contact,
+            email: newSettings.email, website: (newSettings as any).website, owner_name: newSettings.ownerName,
+            currency: newSettings.currency, late_fee_enabled: newSettings.lateFeeEnabled,
+            late_fee_amount: newSettings.lateFeeAmount, grace_period_days: newSettings.gracePeriodDays
+        }).eq("id", 1);
         if (error) toast.error("Failed to save settings");
-        else {
-            toast.success("Settings saved");
-            refreshData();
-        }
+        else { toast.success("Settings saved"); refreshData(); }
     };
 
-    const resetData = () => {
-        toast.error("Cloud data cannot be reset this way.");
-    };
+    // --- UTILS ---
+    const resetData = () => toast.error("Cloud data cannot be reset this way.");
 
     const loadStats = () => {
         const totalBeds = rooms.flatMap(r => r.beds || []).length;

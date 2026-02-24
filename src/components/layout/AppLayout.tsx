@@ -13,7 +13,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { payments, maintenance, announcements, settings } = useData();
+  const { payments, maintenance, announcements, settings, user, logout } = useData();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
