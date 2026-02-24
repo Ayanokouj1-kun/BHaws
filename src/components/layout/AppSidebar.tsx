@@ -50,10 +50,10 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-md overflow-hidden border border-slate-100">
-            <img src="/logo.png" alt="Logo" className="h-full w-full object-cover" />
+            <img src="/logo.png" alt="BHaws Logo" className="h-full w-full object-cover" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-sidebar-accent-foreground">BoardHub</h2>
+            <h2 className="text-sm font-bold text-sidebar-accent-foreground">BHaws</h2>
             <p className="text-[10px] text-sidebar-foreground uppercase tracking-widest">Management System</p>
           </div>
         </div>

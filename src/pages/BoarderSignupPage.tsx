@@ -107,7 +107,7 @@ const BoarderSignupPage = () => {
 
         <div className="flex flex-col items-center space-y-3">
           <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
-            <img src="/logo.png" alt="BoardHub Logo" className="h-full w-full object-cover" />
+            <img src="/logo.png" alt="BHaws Logo" className="h-full w-full object-cover" />
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Boarder Sign Up</h1>
@@ -200,7 +200,7 @@ const BoarderSignupPage = () => {
         </Card>
 
         <p className="text-center text-[9px] text-slate-300 font-black uppercase tracking-[0.3em] pt-2">
-          © 2026 BoardHub Cloud • Resident Access
+          © 2026 BHaws Cloud • Resident Access
         </p>
       </div>
     </div>

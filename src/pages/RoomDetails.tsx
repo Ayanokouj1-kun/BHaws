@@ -132,8 +132,12 @@ const RoomDetails = () => {
                                                             <p className="text-sm font-bold text-foreground">{occupant.fullName}</p>
                                                             <p className="text-[10px] text-muted-foreground">Since {occupant.moveInDate}</p>
                                                         </div>
-                                                        <div className="h-10 w-10 rounded-full bg-accent/20 border-2 border-accent/10 flex items-center justify-center text-accent font-bold">
-                                                            {occupant.fullName.charAt(0)}
+                                                        <div className="h-10 w-10 rounded-full bg-accent/20 border-2 border-accent/10 flex items-center justify-center text-accent font-bold overflow-hidden">
+                                                            {occupant.profilePhoto ? (
+                                                                <img src={occupant.profilePhoto} alt={occupant.fullName} className="h-full w-full object-cover" />
+                                                            ) : (
+                                                                occupant.fullName.charAt(0)
+                                                            )}
                                                         </div>
                                                     </Link>
                                                 ) : (

@@ -44,10 +44,10 @@ const LoginPage = () => {
                 {/* Compact Brand Header */}
                 <div className="flex flex-col items-center space-y-3">
                     <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
-                        <img src="/logo.png" alt="BoardHub Logo" className="h-full w-full object-cover" />
+                        <img src="/logo.png" alt="BHaws Logo" className="h-full w-full object-cover" />
                     </div>
                     <div className="text-center">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">BoardHub</h1>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">BHaws</h1>
                         <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 opacity-80">Management Portal</p>
                     </div>
                 </div>
@@ -133,7 +133,7 @@ const LoginPage = () => {
 
                 {/* Compact Footer */}
                 <p className="text-center text-[9px] text-slate-300 font-black uppercase tracking-[0.3em] pt-2">
-                    © 2026 BoardHub Cloud • v2.6
+                    © 2026 BHaws Cloud • v2.6
                 </p>
             </div>
         </div>

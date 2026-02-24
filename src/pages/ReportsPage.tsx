@@ -24,9 +24,8 @@ const ReportsPage = () => {
     { key: "history", label: "History", icon: Users },
   ];
 
-  const getBoarderName = (boarderId: string) => {
-    return boarders.find(b => b.id === boarderId)?.fullName ?? "Unknown";
-  };
+  const getBoarder = (boarderId: string) => boarders.find(b => b.id === boarderId);
+  const getBoarderName = (boarderId: string) => getBoarder(boarderId)?.fullName ?? "Unknown";
 
   const paidPayments = useMemo(() => payments.filter(p => p.status === "Paid"), [payments]);
   const unpaidPayments = useMemo(() => payments.filter(p => p.status === "Overdue" || p.status === "Pending"), [payments]);
@@ -150,8 +149,12 @@ const ReportsPage = () => {
                   return (
                     <div key={b.id} className="group flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border/50 hover:border-accent/30 hover:bg-accent/[0.02] transition-all duration-300">
                       <div className="flex items-center gap-5">
-                        <div className="h-12 w-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-lg font-bold group-hover:scale-110 transition-transform">
-                          {b.fullName.charAt(0)}
+                        <div className="h-12 w-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-lg font-bold group-hover:scale-110 transition-transform overflow-hidden">
+                          {b.profilePhoto ? (
+                            <img src={b.profilePhoto} alt={b.fullName} className="h-full w-full object-cover" />
+                          ) : (
+                            b.fullName.charAt(0)
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-base text-foreground mb-1">{b.fullName}</p>
@@ -247,26 +250,45 @@ const ReportsPage = () => {
               </div>
               {unpaidPayments.length > 0 ? (
                 <div className="grid gap-4">
-                  {unpaidPayments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between p-5 rounded-2xl bg-destructive/[0.03] border border-destructive/10 hover:bg-destructive/[0.05] transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
-                          <ShieldCheck className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-base text-foreground leading-tight">{getBoarderName(p.boarderId)}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"}`}>{p.status}</span>
-                            <span className="text-[10px] font-bold text-muted-foreground opacity-60">MONTH: {p.month || p.date}</span>
+                  {unpaidPayments.map((p) => {
+                    const b = getBoarder(p.boarderId);
+                    const name = b?.fullName ?? getBoarderName(p.boarderId);
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-5 rounded-2xl bg-destructive/[0.03] border border-destructive/10 hover:bg-destructive/[0.05] transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive text-sm font-bold overflow-hidden">
+                            {b?.profilePhoto ? (
+                              <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
+                            ) : (
+                              name.charAt(0)
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-base text-foreground leading-tight">{name}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span
+                                className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${
+                                  p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"
+                                }`}
+                              >
+                                {p.status}
+                              </span>
+                              <span className="text-[10px] font-bold text-muted-foreground opacity-60">
+                                MONTH: {p.month || p.date}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        <div className="text-right">
+                          <p className="font-black text-xl text-destructive">₱{p.amount.toLocaleString()}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">{p.type}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-black text-xl text-destructive">₱{p.amount.toLocaleString()}</p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">{p.type}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-28 text-center text-muted-foreground">
@@ -346,22 +368,32 @@ const ReportsPage = () => {
                   <span className="text-right">Timestamp</span>
                 </div>
                 <div className="divide-y divide-border/20">
-                  {paidPayments.map((p) => (
-                    <div key={p.id} className="grid grid-cols-4 gap-4 px-8 py-5 hover:bg-card hover:translate-x-1 transition-all duration-200">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-foreground truncate">{p.type}</span>
-                        <span className="text-[10px] text-muted-foreground font-bold font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
+                  {paidPayments.map((p) => {
+                    const b = getBoarder(p.boarderId);
+                    const name = b?.fullName ?? getBoarderName(p.boarderId);
+                    return (
+                      <div key={p.id} className="grid grid-cols-4 gap-4 px-8 py-5 hover:bg-card hover:translate-x-1 transition-all duration-200">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-foreground truncate">{p.type}</span>
+                          <span className="text-[10px] text-muted-foreground font-bold font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
+                        </div>
+                        <div className="flex items-center text-sm font-semibold text-foreground truncate gap-2">
+                          <div className="h-6 w-6 rounded-lg bg-accent/5 flex items-center justify-center text-[9px] font-black text-accent border border-accent/10 overflow-hidden">
+                            {b?.profilePhoto ? (
+                              <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
+                            ) : (
+                              name.charAt(0)
+                            )}
+                          </div>
+                          {name}
+                        </div>
+                        <span className="text-base font-black text-success self-center tracking-tight">₱{p.amount.toLocaleString()}</span>
+                        <div className="text-right self-center">
+                          <span className="text-xs font-bold text-muted-foreground">{p.paidDate || p.date}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center text-sm font-semibold text-foreground truncate gap-2">
-                        <div className="h-6 w-6 rounded-lg bg-accent/5 flex items-center justify-center text-[9px] font-black text-accent border border-accent/10">{getBoarderName(p.boarderId).charAt(0)}</div>
-                        {getBoarderName(p.boarderId)}
-                      </div>
-                      <span className="text-base font-black text-success self-center tracking-tight">₱{p.amount.toLocaleString()}</span>
-                      <div className="text-right self-center">
-                        <span className="text-xs font-bold text-muted-foreground">{p.paidDate || p.date}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {paidPayments.length === 0 && (
                     <div className="py-24 flex flex-col items-center justify-center text-muted-foreground italic text-sm">
                       <Calendar className="h-12 w-12 opacity-5 mb-4" />

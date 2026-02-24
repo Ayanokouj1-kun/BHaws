@@ -180,14 +180,21 @@ const BoardersPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((b) => (
-                <TableRow key={b.id} className="hover:bg-muted/20 transition-colors group">
+            {filtered.map((b) => (
+              <TableRow
+                key={b.id}
+                className="hover:bg-muted/40 transition-colors group"
+              >
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-4">
                       {b.profilePhoto ? (
-                        <img src={b.profilePhoto} className="h-10 w-10 rounded-full object-cover border border-accent/20" alt="" />
+                        <img
+                          src={b.profilePhoto}
+                          className="h-10 w-10 rounded-full object-cover border border-accent/20"
+                          alt="Boarder profile"
+                        />
                       ) : (
-                        <div className="h-10 w-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-sm font-bold group-hover:bg-accent group-hover:text-white transition-all duration-300">
+                        <div className="h-10 w-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-sm font-bold transition-transform duration-200 group-hover:scale-[1.03]">
                           {b.fullName.charAt(0)}
                         </div>
                       )}
@@ -207,7 +214,7 @@ const BoardersPage = () => {
                         <Home className="h-3 w-3 text-muted-foreground" /> {getRoomName(b.assignedRoomId)}
                       </div>
                       <Badge variant="outline" className="w-fit text-[9px] font-bold px-1.5 py-0 bg-muted/30">
-                        Bed {rooms.find(r => r.id === b.assignedRoomId)?.beds.find(bed => bed.id === b.assignedBedId)?.name || "?"}
+                        {rooms.find(r => r.id === b.assignedRoomId)?.beds.find(bed => bed.id === b.assignedBedId)?.name || "Bed ?"}
                       </Badge>
                     </div>
                   </TableCell>
@@ -233,14 +240,29 @@ const BoardersPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="pr-6">
-                    <div className="flex gap-1 items-center transition-opacity flex-nowrap">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => navigate(`/boarders/${b.id}`)}>
+                    <div className="flex gap-1 items-center flex-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+                        onClick={() => navigate(`/boarders/${b.id}`)}
+                      >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleOpenEdit(b)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+                        onClick={() => handleOpenEdit(b)}
+                      >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(b.id, b.fullName)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(b.id, b.fullName)}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

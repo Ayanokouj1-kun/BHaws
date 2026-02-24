@@ -171,7 +171,10 @@ const RoomsPage = () => {
             const info = statusInfo(room.status);
 
             return (
-              <div key={room.id} className="group glass-card rounded-2xl p-5 border-border/50 hover:border-accent/40 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+              <div
+                key={room.id}
+                className="group rounded-2xl p-5 border border-border/50 bg-card shadow-sm hover:bg-muted/40 hover:shadow-md transition-colors duration-200 flex flex-col justify-between"
+              >
                 <div>
                   <div className="relative mb-4">
                     {/* Status badge - absolute positioned to never affect flow */}
@@ -224,14 +227,29 @@ const RoomsPage = () => {
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 mt-2 border-t border-border/30">
-                  <Button variant="ghost" size="sm" className="h-8 flex-1 text-xs gap-2 hover:bg-accent/5" asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 flex-1 text-xs gap-2 hover:bg-muted/40"
+                    asChild
+                  >
                     <Link to={`/rooms/${room.id}`}><Eye className="h-3.5 w-3.5 text-accent" /> Details</Link>
                   </Button>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleOpenEdit(room)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+                      onClick={() => handleOpenEdit(room)}
+                    >
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteRoom(room.id, room.name)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteRoom(room.id, room.name)}
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>

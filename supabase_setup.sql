@@ -119,7 +119,7 @@ CREATE TABLE announcements (
 -- 10. Settings Table (Single row)
 CREATE TABLE settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  name TEXT NOT NULL DEFAULT 'BoardHub Residences',
+  name TEXT NOT NULL DEFAULT 'BHaws Residences',
   address TEXT,
   contact TEXT,
   email TEXT,
@@ -170,4 +170,4 @@ CREATE POLICY "Enable all for authenticated users" ON settings FOR ALL USING (au
 CREATE POLICY "Enable all for authenticated users" ON profiles FOR ALL USING (auth.role() = 'authenticated');
 
 -- 13. Initial Settings Data
-INSERT INTO settings (id, name, currency) VALUES (1, 'BoardHub Residences', 'PHP') ON CONFLICT (id) DO NOTHING;
+INSERT INTO settings (id, name, currency) VALUES (1, 'BHaws Residences', 'PHP') ON CONFLICT (id) DO NOTHING;

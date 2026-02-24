@@ -13,13 +13,17 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { payments, maintenance, announcements, settings, user, logout } = useData();
+  const { payments, maintenance, announcements, settings, boarders, user, logout } = useData();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [readNotifs, setReadNotifs] = useState<string[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const boarderPhoto = user?.role === "Boarder"
+    ? boarders.find(b => b.id === user.boarderId)?.profilePhoto
+    : undefined;
 
   // Build notification list from real data
   const notifications = [
@@ -167,8 +171,12 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
                   aria-label="Profile"
                 >
-                  <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold uppercase">
-                    {user?.fullName.charAt(0) || "U"}
+                  <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold uppercase overflow-hidden">
+                    {boarderPhoto ? (
+                      <img src={boarderPhoto} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      user?.fullName.charAt(0) || "U"
+                    )}
                   </div>
                   <div className="hidden sm:block text-left">
                     <p className="text-xs font-semibold text-foreground leading-none">{user?.fullName || "User"}</p>

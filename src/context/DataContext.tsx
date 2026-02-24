@@ -41,7 +41,7 @@ interface DataContextType {
 }
 
 const DEFAULT_SETTINGS: BhSettings = {
-    name: "BoardHub Residences",
+    name: "BHaws Residences",
     address: "123 Mabini St, Santa Cruz, Manila, Philippines",
     contact: "+63 912 345 6789",
     email: "admin@boardhub.com",
@@ -146,7 +146,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
             if (annRes) setAnnouncements(annRes.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
 
-            console.log("✅ BoardHub: Cloud sync complete.");
+            console.log("✅ BHaws: Cloud sync complete.");
         } catch (err) {
             console.error("Cloud sync error:", err);
         }
@@ -264,7 +264,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             address: boarder.address, emergency_contact: boarder.emergencyContact,
             assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
             move_in_date: boarder.moveInDate, advance_amount: boarder.advanceAmount,
-            deposit_amount: boarder.depositAmount, status: boarder.status, occupation: boarder.occupation
+            deposit_amount: boarder.depositAmount, status: boarder.status, occupation: boarder.occupation,
+            profile_photo: boarder.profilePhoto,
         }]).select().single();
 
         if (error) { toast.error("Failed to add boarder: " + error.message); return; }
@@ -282,7 +283,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             full_name: boarder.fullName, contact_number: boarder.contactNumber, email: boarder.email,
             address: boarder.address, emergency_contact: boarder.emergencyContact,
             assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
-            status: boarder.status, occupation: boarder.occupation
+            status: boarder.status, occupation: boarder.occupation,
+            profile_photo: boarder.profilePhoto,
         }).eq("id", boarder.id);
 
         if (error) { toast.error("Failed to update boarder"); return; }

@@ -1,4 +1,4 @@
--- DEFAULT SYSTEM USERS FOR BOARDHUB
+-- DEFAULT SYSTEM USERS FOR BHAWS
 -- Fixed: Removed foreign key constraint to auth.users for demo purposes
 
 -- 1. Remove the strict link to Supabase Auth so we can create demo profiles manually

@@ -29,6 +29,8 @@ const BoarderDetails = () => {
     const room = rooms.find((r) => r.id === boarder?.assignedRoomId);
     const bed = room?.beds.find((b) => b.id === boarder?.assignedBedId);
 
+    const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
+
     if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
     if (!boarder) return <AppLayout><div>Boarder not found</div></AppLayout>;
 
@@ -95,8 +97,12 @@ const BoarderDetails = () => {
                             <div className="pt-6 border-t border-border/40">
                                 <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-4">Emergency Contact</h3>
                                 <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/10">
-                                    <p className="text-sm font-semibold text-foreground">{boarder.emergencyContact.split(" - ")[0]}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{boarder.emergencyContact.split(" - ")[1]}</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        {emergencyName || "Not specified"}
+                                    </p>
+                                    {emergencyInfo && (
+                                        <p className="text-xs text-muted-foreground mt-1">{emergencyInfo}</p>
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
