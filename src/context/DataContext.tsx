@@ -67,63 +67,58 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     const refreshData = useCallback(async () => {
+        console.log("🔄 Synchronizing with BoardHub Cloud...");
         try {
-            // Priority 1: Check LocalStorage for manual login persistence
+            // 1. Initial Identity Check
             const savedUser = localStorage.getItem("bh_user");
             if (savedUser) {
-                setUser(JSON.parse(savedUser));
-            } else {
-                // Priority 2: Check Supabase Auth for official sessions
-                const { data: userData } = await supabase.auth.getUser();
-                if (userData?.user) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', userData.user.id)
-                        .single();
-
-                    if (profile) {
-                        const u = {
-                            id: profile.id,
-                            username: profile.username,
-                            fullName: profile.full_name,
-                            role: profile.role,
-                            boarderId: profile.boarder_id
-                        };
-                        setUser(u as any);
-                        localStorage.setItem("bh_user", JSON.stringify(u));
-                    }
+                try {
+                    setUser(JSON.parse(savedUser));
+                } catch (e) {
+                    console.error("Malformed session data, clearing...", e);
+                    localStorage.removeItem("bh_user");
                 }
             }
 
+            // 2. Fetch Core Modules (Sequential with error boundaries)
+            const fetchTable = async (table: string, query = '*') => {
+                const { data, error } = await supabase.from(table).select(query);
+                if (error) {
+                    console.warn(`⚠️ Table [${table}] not found or inaccessible:`, error.message);
+                    return null;
+                }
+                return data;
+            };
+
             const [
-                { data: roomsData },
-                { data: boardersData },
-                { data: paymentsData },
-                { data: logsData },
-                { data: settingsData },
-                { data: maintenanceData },
-                { data: expensesData },
-                { data: announcementsData }
+                roomsRaw, boardersRaw, paymentsRaw, logsRaw,
+                settingsRaw, maintenanceRaw, expensesRaw, announcementsRaw
             ] = await Promise.all([
                 supabase.from('rooms').select('*, beds(*)'),
-                supabase.from('boarders').select('*'),
-                supabase.from('payments').select('*'),
+                fetchTable('boarders'),
+                fetchTable('payments'),
                 supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }),
                 supabase.from('settings').select('*').eq('id', 1).single(),
-                supabase.from('maintenance_requests').select('*'),
-                supabase.from('expenses').select('*'),
-                supabase.from('announcements').select('*')
+                fetchTable('maintenance_requests'),
+                fetchTable('expenses'),
+                fetchTable('announcements')
             ]);
 
-            if (roomsData) setRooms(roomsData.map(r => ({
+            // 3. Transform and Map Data
+            if (roomsRaw.data) setRooms(roomsRaw.data.map((r: any) => ({
                 ...r,
-                monthlyRate: parseFloat(r.monthly_rate),
+                monthlyRate: parseFloat(r.monthly_rate) || 0,
                 createdAt: r.created_at,
-                updatedAt: r.updated_at
+                updatedAt: r.updated_at,
+                // Map inner beds
+                beds: (r.beds || []).map((b: any) => ({
+                    ...b,
+                    roomId: b.room_id,
+                    boarderId: b.boarder_id
+                }))
             })));
 
-            if (boardersData) setBoarders(boardersData.map(b => ({
+            if (boardersRaw) setBoarders(boardersRaw.map((b: any) => ({
                 ...b,
                 fullName: b.full_name,
                 contactNumber: b.contact_number,
@@ -132,37 +127,40 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 assignedBedId: b.assigned_bed_id,
                 moveInDate: b.move_in_date,
                 moveOutDate: b.move_out_date,
-                advanceAmount: parseFloat(b.advance_amount),
-                depositAmount: parseFloat(b.deposit_amount),
+                advanceAmount: parseFloat(b.advance_amount) || 0,
+                depositAmount: parseFloat(b.deposit_amount) || 0,
                 profilePhoto: b.profile_photo,
                 createdAt: b.created_at
             })));
 
-            if (paymentsData) setPayments(paymentsData.map(p => ({
+            if (paymentsRaw) setPayments(paymentsRaw.map((p: any) => ({
                 ...p,
                 boarderId: p.boarder_id,
                 paidDate: p.paid_date,
                 dueDate: p.due_date,
-                lateFee: parseFloat(p.late_fee),
+                lateFee: parseFloat(p.late_fee) || 0,
                 receiptNumber: p.receipt_number,
                 createdAt: p.created_at
             })));
 
-            if (logsData) setAuditLogs(logsData.map(l => ({
+            if (logsRaw) setAuditLogs(logsRaw.map((l: any) => ({
                 ...l,
                 entityId: l.entity_id,
                 performedBy: l.performed_by
             })));
 
-            if (settingsData) setSettings({
-                ...settingsData,
-                ownerName: settingsData.owner_name,
-                lateFeeEnabled: settingsData.late_fee_enabled,
-                lateFeeAmount: parseFloat(settingsData.late_fee_amount),
-                gracePeriodDays: settingsData.grace_period_days
-            });
+            if (settingsRaw.data) {
+                const s = settingsRaw.data;
+                setSettings({
+                    ...s,
+                    ownerName: s.owner_name,
+                    lateFeeEnabled: s.late_fee_enabled,
+                    lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
+                    gracePeriodDays: s.grace_period_days || 0
+                });
+            }
 
-            if (maintenanceData) setMaintenance(maintenanceData.map(m => ({
+            if (maintenanceRaw) setMaintenance(maintenanceRaw.map((m: any) => ({
                 ...m,
                 roomId: m.room_id,
                 boarderId: m.boarder_id,
@@ -170,24 +168,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 resolvedAt: m.resolved_at
             })));
 
-            if (expensesData) setExpenses(expensesData.map(e => ({
+            if (expensesRaw) setExpenses(expensesRaw.map((e: any) => ({
                 ...e,
                 paidBy: e.paid_by,
                 receiptRef: e.receipt_ref
             })));
 
-            if (announcementsData) setAnnouncements(announcementsData.map(a => ({
+            if (announcementsRaw) setAnnouncements(announcementsRaw.map((a: any) => ({
                 ...a,
                 createdAt: a.created_at,
                 expiresAt: a.expires_at
             })));
 
+            console.log("✅ Cloud Sync Complete.");
         } catch (err) {
-            console.error("Error loading Supabase data:", err);
+            console.error("Critical error during cloud sync:", err);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [supabase]);
 
     useEffect(() => {
         refreshData();
