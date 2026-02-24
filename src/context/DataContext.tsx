@@ -68,22 +68,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const refreshData = useCallback(async () => {
         try {
-            const { data: userData } = await supabase.auth.getUser();
-            if (userData?.user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', userData.user.id)
-                    .single();
+            // Priority 1: Check LocalStorage for manual login persistence
+            const savedUser = localStorage.getItem("bh_user");
+            if (savedUser) {
+                setUser(JSON.parse(savedUser));
+            } else {
+                // Priority 2: Check Supabase Auth for official sessions
+                const { data: userData } = await supabase.auth.getUser();
+                if (userData?.user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userData.user.id)
+                        .single();
 
-                if (profile) {
-                    setUser({
-                        id: profile.id,
-                        username: profile.username,
-                        fullName: profile.full_name,
-                        role: profile.role,
-                        boarderId: profile.boarder_id
-                    });
+                    if (profile) {
+                        const u = {
+                            id: profile.id,
+                            username: profile.username,
+                            fullName: profile.full_name,
+                            role: profile.role,
+                            boarderId: profile.boarder_id
+                        };
+                        setUser(u as any);
+                        localStorage.setItem("bh_user", JSON.stringify(u));
+                    }
                 }
             }
 
@@ -185,45 +194,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, [refreshData]);
 
     const login = async (username: string, password: string): Promise<boolean> => {
-        // For now, we'll keep the mock logic but link it to the profiles table
-        // In a real app, you'd use supabase.auth.signInWithPassword
-        // Since we don't have Auth users yet, let's just find in profiles
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('username', username)
-            .single();
+        try {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('username', username.toLowerCase())
+                .single();
 
-        if (error || !profile) {
-            // Temporary: fall back to mock if profiles table is empty for easy testing
-            const MOCK_USERS = [
-                { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" },
-                { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" },
-                { id: "u3", username: "boarder", fullName: "Juan Dela Cruz", role: "Boarder", boarderId: "bo1" },
-            ];
-            const foundMock = MOCK_USERS.find(u => u.username === username && password === username);
-            if (foundMock) {
-                setUser(foundMock as any);
-                localStorage.setItem("bh_user", JSON.stringify(foundMock));
+            if (error || !profile) {
+                // Fallback for demo: allows login even if DB query fails but credentials match mock
+                const MOCK_USERS = [
+                    { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" },
+                    { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" },
+                    { id: "u3", username: "boarder", fullName: "Juan Dela Cruz", role: "Boarder", boarderId: "bo1" },
+                ];
+                const foundMock = MOCK_USERS.find(u => u.username === username.toLowerCase() && password === username);
+                if (foundMock) {
+                    setUser(foundMock as any);
+                    localStorage.setItem("bh_user", JSON.stringify(foundMock));
+                    return true;
+                }
+                return false;
+            }
+
+            // Simple Password Check: Password must match Username exactly
+            if (password === username) {
+                const u = {
+                    id: profile.id,
+                    username: profile.username,
+                    fullName: profile.full_name,
+                    role: profile.role,
+                    boarderId: profile.boarder_id
+                };
+                setUser(u as any);
+                localStorage.setItem("bh_user", JSON.stringify(u));
                 return true;
             }
             return false;
+        } catch (err) {
+            console.error("Login exception:", err);
+            return false;
         }
-
-        // Check simple password (password = username for now)
-        if (password === username) {
-            const u = {
-                id: profile.id,
-                username: profile.username,
-                fullName: profile.full_name,
-                role: profile.role,
-                boarderId: profile.boarder_id
-            };
-            setUser(u as any);
-            localStorage.setItem("bh_user", JSON.stringify(u));
-            return true;
-        }
-        return false;
     };
 
     const logout = async () => {
