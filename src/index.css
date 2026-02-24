@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ─── Surfaces ───────────────────────────────────── */
+    --background:   214 32% 96%;       /* Cool off-white background     */
+    --foreground:   220 25% 12%;       /* Near-black text               */
+
+    --card:         0   0%  100%;      /* Pure white cards              */
+    --card-foreground: 220 25% 12%;
+
+    --popover:      0   0%  100%;
+    --popover-foreground: 220 25% 12%;
+
+    /* ─── Brand ──────────────────────────────────────── */
+    --primary:      225 64% 32%;       /* Deep navy-blue                */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:    214 20% 93%;       /* Subtle cool grey              */
+    --secondary-foreground: 220 25% 20%;
+
+    /* ─── Utility ────────────────────────────────────── */
+    --muted:        214 18% 92%;
+    --muted-foreground: 220 10% 48%;
+
+    --accent:       231 64% 55%;       /* Professional indigo           */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive:  0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:       214 20% 88%;
+    --input:        214 20% 88%;
+    --ring:         225 64% 32%;
+
+    --radius: 0.625rem;
+
+    /* ─── Semantic ───────────────────────────────────── */
+    --success:      152 56% 36%;       /* Forest green                  */
+    --success-foreground: 0 0% 100%;
+    --warning:      36 90% 48%;        /* Amber                         */
+    --warning-foreground: 36 90% 14%;
+    --info:         211 92% 48%;       /* Sky blue                      */
+    --info-foreground: 0 0% 100%;
+
+    /* ─── Sidebar (deep navy) ────────────────────────── */
+    --sidebar-background:       222 47% 11%;  /* #0f172a slate-900 */
+    --sidebar-foreground:       215 20% 65%;  /* slate-400          */
+    --sidebar-primary:          231 64% 60%;  /* Indigo 400         */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:           222 40% 17%;  /* slate-800          */
+    --sidebar-accent-foreground:215 25% 88%;  /* near-white         */
+    --sidebar-border:           222 40% 16%;
+    --sidebar-ring:             231 64% 60%;
+
+    /* ─── Charts ─────────────────────────────────────── */
+    --chart-1: 231 64% 55%;   /* indigo   */
+    --chart-2: 152 56% 36%;   /* green    */
+    --chart-3:  36 90% 48%;   /* amber    */
+    --chart-4: 281 60% 50%;   /* violet   */
+    --chart-5:   0 70% 50%;   /* red      */
+  }
+
+  .dark {
+    --background:   222 47% 8%;
+    --foreground:   215 20% 88%;
+
+    --card:         222 47% 11%;
+    --card-foreground: 215 20% 88%;
+
+    --popover:      222 47% 11%;
+    --popover-foreground: 215 20% 88%;
+
+    --primary:      231 64% 60%;
+    --primary-foreground: 222 47% 8%;
+
+    --secondary:    222 40% 17%;
+    --secondary-foreground: 215 20% 88%;
+
+    --muted:        222 40% 15%;
+    --muted-foreground: 215 15% 52%;
+
+    --accent:       231 64% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive:  0 62% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:       222 40% 18%;
+    --input:        222 40% 18%;
+    --ring:         231 64% 60%;
+
+    --success:      152 56% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning:       36 90% 48%;
+    --warning-foreground: 36 90% 14%;
+    --info:         211 92% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --sidebar-background:       222 47% 6%;
+    --sidebar-foreground:       215 15% 55%;
+    --sidebar-primary:          231 64% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:           222 40% 12%;
+    --sidebar-accent-foreground:215 20% 88%;
+    --sidebar-border:           222 40% 12%;
+    --sidebar-ring:             231 64% 60%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/30; }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/90 backdrop-blur-sm border border-border/50 shadow-sm;
+  }
+
+  .stat-card {
+    @apply bg-card border border-border/60 rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .page-header {
+    @apply text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  /* Fade-in animation */
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out both;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
