@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2 } from "lucide-react";
+import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2, AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Announcement, BhSettings } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,8 @@ const SettingsPage = () => {
   const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, resetData, isLoading } = useData();
   const [editInfo, setEditInfo] = useState<BhSettings>(settings);
   const [annDialog, setAnnDialog] = useState(false);
+  const [resetDialog, setResetDialog] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
   const [newAnn, setNewAnn] = useState({ title: "", message: "", priority: "Normal" as Announcement["priority"] });
 
   const handleSave = () => {
@@ -36,8 +38,13 @@ const SettingsPage = () => {
   };
 
   const handleReset = () => {
-    if (confirm("⚠️ This will DELETE all data and reset the system. This action CANNOT be undone. Continue?")) {
+    if (resetConfirmText === "RESET DATABASE") {
       resetData();
+      setResetDialog(false);
+      setResetConfirmText("");
+      toast.success("System has been factory reset");
+    } else {
+      toast.error("Confirmation text does not match");
     }
   };
 
@@ -196,7 +203,7 @@ const SettingsPage = () => {
           <Button className="gap-2 flex-1" onClick={handleSave}>
             <Save className="h-4 w-4" /> Save All Settings
           </Button>
-          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive" onClick={handleReset}>
+          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive" onClick={() => setResetDialog(true)}>
             Factory Reset
           </Button>
         </div>
@@ -233,7 +240,39 @@ const SettingsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+
+      {/* Factory Reset Dialog */}
+      <Dialog open={resetDialog} onOpenChange={setResetDialog}>
+        <DialogContent className="max-w-md border-destructive/40">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" /> Danger Zone: Factory Reset
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-foreground">
+              <p className="font-bold mb-2 text-destructive">WARNING: DESTRUCTIVE ACTION</p>
+              <p>This action will manually erase all your records including boarders, payments, rooms, and audit logs. This action cannot be undone.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>To proceed, please type <strong className="select-none">RESET DATABASE</strong> below:</Label>
+              <Input
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="RESET DATABASE"
+                className="border-destructive/30 focus-visible:ring-destructive font-mono"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetDialog(false); setResetConfirmText(""); }}>Cancel</Button>
+            <Button variant="destructive" disabled={resetConfirmText !== "RESET DATABASE"} onClick={handleReset}>
+              Permanently Delete Everything
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppLayout >
   );
 };
 

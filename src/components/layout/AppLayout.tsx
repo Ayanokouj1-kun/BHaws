@@ -46,8 +46,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       .filter(m => (m.status === "Open" || m.status === "In Progress") && m.priority === "Urgent")
       .map(m => ({ id: `maint-${m.id}`, type: "urgent", message: `Urgent maintenance: ${m.title}`, time: m.createdAt })),
     ...announcements
-      .filter(a => a.priority === "Urgent" || a.priority === "Important")
-      .slice(0, 2)
+      .filter(a => {
+        const days = Math.ceil(Math.abs(new Date().getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        return days <= 7;
+      })
+      .slice(0, 3)
       .map(a => ({ id: `ann-${a.id}`, type: "announce", message: a.title, time: a.createdAt })),
   ].slice(0, 8);
 
@@ -212,8 +215,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                       <p className="text-sm font-bold text-foreground">{user?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{user?.username}</p>
                       <Badge variant="outline" className={`mt-1.5 text-[9px] font-bold uppercase border-opacity-20 ${user?.role === "Admin" ? "text-accent border-accent bg-accent/5" :
-                          user?.role === "Staff" ? "text-success border-success bg-success/5" :
-                            "text-warning border-warning bg-warning/5"
+                        user?.role === "Staff" ? "text-success border-success bg-success/5" :
+                          "text-warning border-warning bg-warning/5"
                         }`}>
                         {user?.role}
                       </Badge>
