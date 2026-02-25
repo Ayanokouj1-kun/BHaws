@@ -558,8 +558,9 @@ const BoardersPage = () => {
                   )}
                   <div className="flex justify-between text-[9px] border-t border-accent/20 pt-1.5 mt-1">
                     <span className="text-muted-foreground font-bold uppercase tracking-widest">Total Collected</span>
+                    {/* Advance is already inside deposit, NOT added on top */}
                     <span className="font-bold text-accent text-sm">
-                      ₱{((currentBoarder.advanceAmount ?? 0) + (currentBoarder.depositAmount ?? 0)).toLocaleString()}
+                      ₱{(currentBoarder.depositAmount ?? 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
