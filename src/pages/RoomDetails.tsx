@@ -77,13 +77,13 @@ const RoomDetails = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                <div className="p-2 sm:p-4 rounded-xl bg-muted/30 border border-border/30 text-center overflow-hidden">
+                                <div className="p-2 sm:p-4 rounded-xl bg-muted/30 border border-border/30 text-center flex flex-col justify-center">
                                     <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Potential</p>
-                                    <p className="text-sm sm:text-base font-bold truncate">₱{(room.monthlyRate * room.capacity).toLocaleString()}</p>
+                                    <p className="text-[11px] min-[400px]:text-sm sm:text-lg font-bold tracking-tight">₱{(room.monthlyRate * room.capacity).toLocaleString()}</p>
                                 </div>
-                                <div className="p-2 sm:p-4 rounded-xl bg-success/5 border border-success/10 text-center overflow-hidden">
+                                <div className="p-2 sm:p-4 rounded-xl bg-success/5 border border-success/10 text-center flex flex-col justify-center">
                                     <p className="text-[10px] sm:text-xs text-success uppercase mb-1">Current</p>
-                                    <p className="text-sm sm:text-base font-bold text-success truncate">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
+                                    <p className="text-[11px] min-[400px]:text-sm sm:text-lg font-bold text-success tracking-tight">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
                                 </div>
                             </div>
 
