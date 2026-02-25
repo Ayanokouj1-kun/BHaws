@@ -152,7 +152,7 @@ const PaymentsPage = () => {
                 <TableHead>Period</TableHead>
                 <TableHead className="whitespace-nowrap">Type</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[150px]">Actions</TableHead>
+                <TableHead className="w-[150px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,9 +183,9 @@ const PaymentsPage = () => {
                       {p.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 items-center transition-opacity flex-nowrap">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleOpenEdit(p)}>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <div className="flex gap-1 items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity flex-nowrap">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent hover:bg-accent/5" onClick={() => handleOpenEdit(p)}>
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
 

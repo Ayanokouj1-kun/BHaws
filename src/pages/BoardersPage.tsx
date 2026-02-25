@@ -250,8 +250,8 @@ const BoardersPage = () => {
                       {b.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="pr-6">
-                    <div className="flex gap-1 items-center flex-nowrap">
+                  <TableCell className="pr-6 whitespace-nowrap">
+                    <div className="flex gap-1 items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity flex-nowrap">
                       <Button
                         variant="ghost"
                         size="icon"

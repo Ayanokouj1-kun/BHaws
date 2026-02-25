@@ -235,7 +235,7 @@ const RoomsPage = () => {
                   >
                     <Link to={`/rooms/${room.id}`}><Eye className="h-3.5 w-3.5 text-accent" /> Details</Link>
                   </Button>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"
