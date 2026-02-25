@@ -187,7 +187,7 @@ const BoardersPage = () => {
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Contact Detail</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground hidden lg:table-cell">Finance</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                <TableHead className="w-[60px] pr-6"></TableHead>
+                <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -251,11 +251,11 @@ const BoardersPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="pr-6 whitespace-nowrap">
-                    <div className="flex gap-1 items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity flex-nowrap">
+                    <div className="flex gap-1 items-center justify-end flex-nowrap">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+                        className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors"
                         onClick={() => navigate(`/boarders/${b.id}`)}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -263,7 +263,7 @@ const BoardersPage = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+                        className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors"
                         onClick={() => handleOpenEdit(b)}
                       >
                         <Edit className="h-3.5 w-3.5" />
@@ -271,7 +271,7 @@ const BoardersPage = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors"
                         onClick={() => handleDelete(b.id, b.fullName)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

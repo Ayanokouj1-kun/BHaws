@@ -184,8 +184,8 @@ const PaymentsPage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex gap-1 items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity flex-nowrap">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent hover:bg-accent/5" onClick={() => handleOpenEdit(p)}>
+                    <div className="flex gap-1 items-center justify-end flex-nowrap">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent" onClick={() => handleOpenEdit(p)}>
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
 

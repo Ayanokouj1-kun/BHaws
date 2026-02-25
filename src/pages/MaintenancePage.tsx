@@ -203,22 +203,22 @@ const MaintenancePage = () => {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{req.createdAt}</TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-1 transition-opacity">
+                                    <TableCell className="text-right whitespace-nowrap">
+                                        <div className="flex gap-1 items-center justify-end flex-nowrap">
                                             {req.status === "Open" && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-warning" onClick={() => handleQuickStatus(req, "In Progress")}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-warning hover:bg-warning/5" onClick={() => handleQuickStatus(req, "In Progress")}>
                                                     Start
                                                 </Button>
                                             )}
                                             {req.status === "In Progress" && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-success" onClick={() => handleQuickStatus(req, "Resolved")}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-success hover:bg-success/5" onClick={() => handleQuickStatus(req, "Resolved")}>
                                                     Resolve
                                                 </Button>
                                             )}
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(req)}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors" onClick={() => handleEdit(req)}>
                                                 <Edit className="h-3.5 w-3.5" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(req.id)}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(req.id)}>
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
