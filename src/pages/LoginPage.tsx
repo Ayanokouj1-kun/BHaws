@@ -40,15 +40,16 @@ const LoginPage = () => {
                 <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[80px]" />
             </div>
 
-            <div className="w-full max-w-[360px] relative z-10 space-y-5 animate-in fade-in zoom-in duration-500">
-                {/* Compact Brand Header */}
-                <div className="flex flex-col items-center space-y-3">
-                    <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
-                        <img src="/logo.png" alt="BHaws Logo" className="h-full w-full object-cover" />
+            <div className="w-full max-w-[360px] relative z-10 space-y-1 animate-in fade-in zoom-in duration-500">
+                {/* Brand header: logo and text aligned */}
+                <div className="flex items-center justify-center gap-3">
+                    <div className="h-14 w-14 shrink-0 flex items-center justify-center overflow-hidden">
+                        <img src="/login.png" alt="BHaws Logo" className="h-full w-full object-contain" />
                     </div>
-                    <div className="text-center">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">BHaws</h1>
-                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 opacity-80">Management Portal</p>
+                    <div className="text-left">
+                        <p className="text-[13px] text-slate-500 font-bold uppercase tracking-widest opacity-80">
+                            Management System Portal
+                        </p>
                     </div>
                 </div>
 
@@ -60,14 +61,14 @@ const LoginPage = () => {
                                 <Label htmlFor="username" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">
                                     Username
                                 </Label>
-                                <div className="relative group">
+                                <div className="relative group rounded-xl border border-slate-100 bg-slate-50/30 focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/5 transition-all">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-accent transition-colors" />
                                     <Input
                                         id="username"
                                         placeholder="Identification"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
-                                        className="h-10 pl-9 rounded-xl border-slate-100 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-accent/5 transition-all text-xs placeholder:text-slate-200"
+                                        className="h-10 w-full pl-9 rounded-xl bg-transparent border-0 focus-visible:ring-0 focus:outline-none text-xs placeholder:text-slate-200"
                                         required
                                     />
                                 </div>
@@ -79,7 +80,7 @@ const LoginPage = () => {
                                         Security Key
                                     </Label>
                                 </div>
-                                <div className="relative group">
+                                <div className="relative group rounded-xl border border-slate-100 bg-slate-50/30 focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/5 transition-all">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-accent transition-colors" />
                                     <Input
                                         id="password"
@@ -87,20 +88,20 @@ const LoginPage = () => {
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="h-10 pl-9 rounded-xl border-slate-100 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-accent/5 transition-all text-xs placeholder:text-slate-200"
+                                        className="h-10 w-full pl-9 rounded-xl bg-transparent border-0 focus-visible:ring-0 focus:outline-none text-xs placeholder:text-slate-200"
                                         required
                                     />
                                 </div>
                             </div>
 
                             <Button type="submit" className="w-full h-10 rounded-xl bg-accent hover:bg-accent/90 text-white font-bold text-xs shadow-md shadow-accent/10 transition-all active:scale-[0.98] mt-1 group">
-                                Enter Terminal
+                                Authenticate
                                 <ShieldCheck className="ml-2 h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
                             </Button>
 
                             {/* Simplified Demo Strip */}
                             <div className="pt-2">
-                                <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 mb-2.5">Speed Access</p>
+                                <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 mb-2.5">Demo Account Access</p>
                                 <div className="flex justify-center gap-1.5 px-0.5">
                                     {["admin", "staff", "boarder"].map((role) => (
                                         <button
@@ -133,7 +134,7 @@ const LoginPage = () => {
 
                 {/* Compact Footer */}
                 <p className="text-center text-[9px] text-slate-300 font-black uppercase tracking-[0.3em] pt-2">
-                    © 2026 BHaws Cloud • v2.6
+                    © 2026 BHaws Management System
                 </p>
             </div>
         </div>

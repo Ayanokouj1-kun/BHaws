@@ -27,6 +27,7 @@ const BoardersPage = () => {
     email: "",
     address: "",
     emergencyContact: "",
+    gender: "Male",
     assignedRoomId: "",
     assignedBedId: "",
     moveInDate: new Date().toISOString().split('T')[0],
@@ -84,7 +85,7 @@ const BoardersPage = () => {
     setMode("add");
     setCurrentBoarder({
       fullName: "", contactNumber: "", email: "", address: "",
-      emergencyContact: "", assignedRoomId: "", assignedBedId: "",
+      emergencyContact: "", gender: "Male", assignedRoomId: "", assignedBedId: "",
       moveInDate: new Date().toISOString().split('T')[0],
       advanceAmount: 0, depositAmount: 0, status: "Active",
       profilePhoto: "",
@@ -180,11 +181,11 @@ const BoardersPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-            {filtered.map((b) => (
-              <TableRow
-                key={b.id}
-                className="hover:bg-muted/40 transition-colors group"
-              >
+              {filtered.map((b) => (
+                <TableRow
+                  key={b.id}
+                  className="hover:bg-muted/40 transition-colors group"
+                >
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-4">
                       {b.profilePhoto ? (
@@ -283,26 +284,40 @@ const BoardersPage = () => {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{mode === "add" ? "Register New Boarder" : "Edit Profile"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[75vh] overflow-y-auto pr-1">
-            <div className="space-y-4">
-              {/* Photo Upload */}
-              <div className="flex flex-col items-center justify-center pb-4">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 sm:px-6 pt-5 pb-4 border-b border-border/50">
+            <div className="h-9 w-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+              <User className="h-4 w-4 text-accent" />
+            </div>
+            <div>
+              <DialogTitle className="text-sm sm:text-base font-bold">
+                {mode === "add" ? "Register New Boarder" : "Edit Boarder Profile"}
+              </DialogTitle>
+              <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">Fill in the details below</p>
+            </div>
+          </div>
+
+          {/* Body — stacked on mobile, side-by-side on md+ */}
+          <div className="flex flex-col md:flex-row md:divide-x md:divide-border/50 max-h-[80vh] md:max-h-[70vh] overflow-y-auto md:overflow-hidden">
+
+            {/* ── LEFT PANEL: Photo + Accommodation ── */}
+            <div className="md:w-[240px] md:shrink-0 flex flex-col gap-5 px-4 sm:px-6 py-5 bg-muted/20 md:overflow-y-auto border-b border-border/40 md:border-b-0">
+
+              {/* Profile Photo */}
+              <div className="flex flex-col items-center gap-2">
                 <div className="relative group">
-                  <div className="h-24 w-24 rounded-2xl bg-muted border-2 border-dashed border-border/50 flex items-center justify-center overflow-hidden transition-all hover:border-accent/40">
+                  <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-muted border-2 border-dashed border-border/60 flex items-center justify-center overflow-hidden transition-all hover:border-accent/50 shadow-sm">
                     {currentBoarder.profilePhoto ? (
                       <img src={currentBoarder.profilePhoto} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
-                      <User className="h-10 w-10 text-muted-foreground/40" />
+                      <User className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30" />
                     )}
                   </div>
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-xl shadow-lg border border-border"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-xl shadow-md border border-border"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Camera className="h-4 w-4" />
@@ -311,57 +326,30 @@ const BoardersPage = () => {
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-lg"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md"
                       onClick={removePhoto}
                     >
                       <X className="h-3 w-3" />
                     </Button>
                   )}
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">Profile Photo</p>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Profile Photo</p>
+                <p className="text-[9px] text-muted-foreground/60 text-center leading-tight">Max 2 MB · JPG, PNG</p>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
               </div>
 
-              <div className="grid gap-2">
-                <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <User className="h-3.5 w-3.5" /> Full Name *
-                </Label>
-                <Input value={currentBoarder.fullName} onChange={(e) => setCurrentBoarder({ ...currentBoarder, fullName: e.target.value })} placeholder="Juan Dela Cruz" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5" /> Contact *
-                  </Label>
-                  <Input value={currentBoarder.contactNumber} onChange={(e) => setCurrentBoarder({ ...currentBoarder, contactNumber: e.target.value })} placeholder="09XXX" />
-                </div>
-                <div className="grid gap-2">
-                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5" /> Email
-                  </Label>
-                  <Input type="email" value={currentBoarder.email} onChange={(e) => setCurrentBoarder({ ...currentBoarder, email: e.target.value })} placeholder="juan@gmail.com" />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Home Address</Label>
-                <Input value={currentBoarder.address} onChange={(e) => setCurrentBoarder({ ...currentBoarder, address: e.target.value })} placeholder="City, Province" />
-              </div>
+              <div className="border-t border-border/40" />
 
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 space-y-4">
-                <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent mb-2">
-                  <Home className="h-3.5 w-3.5" /> Accommodation
+              {/* Accommodation */}
+              <div className="space-y-3">
+                <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-accent">
+                  <Home className="h-3 w-3" /> Accommodation
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold text-muted-foreground">Select Room</Label>
+                    <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Room *</Label>
                     <Select value={currentBoarder.assignedRoomId} onValueChange={(val) => setCurrentBoarder({ ...currentBoarder, assignedRoomId: val, assignedBedId: "" })}>
-                      <SelectTrigger className="bg-card"><SelectValue placeholder="Room" /></SelectTrigger>
+                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
                       <SelectContent>
                         {rooms.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.name} ({r.beds.filter(bed => bed.status === "Available").length} av.)</SelectItem>
@@ -370,9 +358,9 @@ const BoardersPage = () => {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold text-muted-foreground">Select Bed</Label>
+                    <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Bed *</Label>
                     <Select value={currentBoarder.assignedBedId} onValueChange={(val) => setCurrentBoarder({ ...currentBoarder, assignedBedId: val })} disabled={!currentBoarder.assignedRoomId}>
-                      <SelectTrigger className="bg-card"><SelectValue placeholder="Bed" /></SelectTrigger>
+                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select bed" /></SelectTrigger>
                       <SelectContent>
                         {availableBeds.map((bed) => (
                           <SelectItem key={bed.id} value={bed.id}>{bed.name}</SelectItem>
@@ -383,19 +371,27 @@ const BoardersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="border-t border-border/40" />
+
+              {/* Move-in + Status */}
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
                 <div className="grid gap-2">
-                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" /> Move-in Date
+                  <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <Calendar className="h-3 w-3" /> Move-in Date
                   </Label>
-                  <Input type="date" value={currentBoarder.moveInDate} onChange={(e) => setCurrentBoarder({ ...currentBoarder, moveInDate: e.target.value })} />
+                  <Input
+                    type="date"
+                    value={currentBoarder.moveInDate}
+                    onChange={(e) => setCurrentBoarder({ ...currentBoarder, moveInDate: e.target.value })}
+                    className="h-9 px-3 text-xs bg-card"
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <ShieldCheck className="h-3.5 w-3.5" /> Status
+                  <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <ShieldCheck className="h-3 w-3" /> Status
                   </Label>
                   <Select value={currentBoarder.status} onValueChange={(val: any) => setCurrentBoarder({ ...currentBoarder, status: val })}>
-                    <SelectTrigger className="bg-card"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-card h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
@@ -404,23 +400,137 @@ const BoardersPage = () => {
                   </Select>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="grid gap-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Advance (₱)</Label>
-                  <Input type="number" value={currentBoarder.advanceAmount} onChange={(e) => setCurrentBoarder({ ...currentBoarder, advanceAmount: Number(e.target.value) })} />
+            {/* ── RIGHT PANEL: Personal Info ── */}
+            <div className="flex-1 flex flex-col gap-5 px-4 sm:px-6 py-5 md:overflow-y-auto">
+
+              {/* Personal Info */}
+              <div className="space-y-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Personal Information</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <User className="h-3 w-3" /> Full Name *
+                    </Label>
+                    <Input
+                      value={currentBoarder.fullName}
+                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, fullName: e.target.value })}
+                      placeholder="Juan Dela Cruz"
+                      className="h-9 px-3 text-xs bg-card"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Gender</Label>
+                    <Select
+                      value={currentBoarder.gender}
+                      onValueChange={(val: "Male" | "Female" | "Other") => setCurrentBoarder({ ...currentBoarder, gender: val })}
+                    >
+                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deposit (₱)</Label>
-                  <Input type="number" value={currentBoarder.depositAmount} onChange={(e) => setCurrentBoarder({ ...currentBoarder, depositAmount: Number(e.target.value) })} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <Phone className="h-3 w-3" /> Contact *
+                    </Label>
+                    <Input
+                      value={currentBoarder.contactNumber}
+                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, contactNumber: e.target.value })}
+                      placeholder="09XXXXXXXXX"
+                      className="h-9 px-3 text-xs bg-card"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <Mail className="h-3 w-3" /> Email
+                    </Label>
+                    <Input
+                      type="email"
+                      value={currentBoarder.email}
+                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, email: e.target.value })}
+                      placeholder="juan@email.com"
+                      className="h-9 px-3 text-xs bg-card"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Home Address</Label>
+                  <Input
+                    value={currentBoarder.address}
+                    onChange={(e) => setCurrentBoarder({ ...currentBoarder, address: e.target.value })}
+                    placeholder="City, Province"
+                    className="h-9 px-3 text-xs bg-card"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Emergency Contact</Label>
+                  <Input
+                    value={currentBoarder.emergencyContact}
+                    onChange={(e) => setCurrentBoarder({ ...currentBoarder, emergencyContact: e.target.value })}
+                    placeholder="Name / Number"
+                    className="h-9 px-3 text-xs bg-card"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-border/40" />
+
+              {/* Finance */}
+              <div className="space-y-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Initial Payments</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Advance (₱)</Label>
+                    <Input
+                      type="number"
+                      value={currentBoarder.advanceAmount}
+                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, advanceAmount: Number(e.target.value) })}
+                      className="h-9 px-3 text-xs bg-card"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Deposit (₱)</Label>
+                    <Input
+                      type="number"
+                      value={currentBoarder.depositAmount}
+                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, depositAmount: Number(e.target.value) })}
+                      className="h-9 px-3 text-xs bg-card"
+                    />
+                  </div>
+                </div>
+
+                {/* Payment summary pill */}
+                <div className="flex items-center justify-between rounded-xl bg-accent/5 border border-accent/20 px-4 py-2.5">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total Collected</span>
+                  <span className="text-sm font-bold text-accent">
+                    ₱{((currentBoarder.advanceAmount ?? 0) + (currentBoarder.depositAmount ?? 0)).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl px-8" onClick={handleSubmit}>{mode === "add" ? "Register Boarder" : "Save Changes"}</Button>
-          </DialogFooter>
+
+          {/* Footer */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border/50 bg-muted/10">
+            <p className="text-[10px] text-muted-foreground">Fields marked * are required</p>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" className="rounded-xl flex-1 sm:flex-none" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button className="rounded-xl px-6 flex-1 sm:flex-none" onClick={handleSubmit}>
+                {mode === "add" ? "Register Boarder" : "Save Changes"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>

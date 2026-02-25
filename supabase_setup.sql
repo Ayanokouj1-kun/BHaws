@@ -45,6 +45,7 @@ CREATE TABLE boarders (
   status TEXT NOT NULL DEFAULT 'Active',
   profile_photo TEXT,
   occupation TEXT,
+  gender TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

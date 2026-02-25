@@ -115,12 +115,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })));
 
             if (boardersRes) setBoarders(boardersRes.map((b: any) => ({
-                ...b, fullName: b.full_name, contactNumber: b.contact_number,
-                emergencyContact: b.emergency_contact, assignedRoomId: b.assigned_room_id,
-                assignedBedId: b.assigned_bed_id, moveInDate: b.move_in_date,
-                moveOutDate: b.move_out_date, advanceAmount: parseFloat(b.advance_amount) || 0,
-                depositAmount: parseFloat(b.deposit_amount) || 0, profilePhoto: b.profile_photo,
-                createdAt: b.created_at
+                ...b,
+                fullName: b.full_name,
+                contactNumber: b.contact_number,
+                emergencyContact: b.emergency_contact,
+                assignedRoomId: b.assigned_room_id,
+                assignedBedId: b.assigned_bed_id,
+                moveInDate: b.move_in_date,
+                moveOutDate: b.move_out_date,
+                advanceAmount: parseFloat(b.advance_amount) || 0,
+                depositAmount: parseFloat(b.deposit_amount) || 0,
+                profilePhoto: b.profile_photo,
+                occupation: b.occupation,
+                gender: b.gender,
+                createdAt: b.created_at,
             })));
 
             if (paymentsRes) setPayments(paymentsRes.map((p: any) => ({
@@ -176,6 +184,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const { data: profile, error } = await supabase
                 .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
+                // If this is a boarder account, require linked boarder to be Active
+                if (profile.role === "Boarder" && profile.boarder_id) {
+                    const { data: boarder } = await supabase
+                        .from("boarders")
+                        .select("status")
+                        .eq("id", profile.boarder_id)
+                        .single();
+                    if (!boarder || boarder.status !== "Active") {
+                        return false;
+                    }
+                }
+
                 const u = {
                     id: profile.id, username: profile.username,
                     fullName: profile.full_name, role: profile.role, boarderId: profile.boarder_id
@@ -260,11 +280,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- BOARDERS ---
     const addBoarder = async (boarder: Boarder) => {
         const { data: nb, error } = await supabase.from("boarders").insert([{
-            full_name: boarder.fullName, contact_number: boarder.contactNumber, email: boarder.email,
-            address: boarder.address, emergency_contact: boarder.emergencyContact,
-            assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
-            move_in_date: boarder.moveInDate, advance_amount: boarder.advanceAmount,
-            deposit_amount: boarder.depositAmount, status: boarder.status, occupation: boarder.occupation,
+            full_name: boarder.fullName,
+            contact_number: boarder.contactNumber,
+            email: boarder.email,
+            address: boarder.address,
+            emergency_contact: boarder.emergencyContact,
+            assigned_room_id: boarder.assignedRoomId,
+            assigned_bed_id: boarder.assignedBedId,
+            move_in_date: boarder.moveInDate,
+            advance_amount: boarder.advanceAmount,
+            deposit_amount: boarder.depositAmount,
+            status: boarder.status,
+            occupation: boarder.occupation,
+            gender: boarder.gender,
             profile_photo: boarder.profilePhoto,
         }]).select().single();
 
@@ -280,10 +308,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const updateBoarder = async (boarder: Boarder) => {
         const { data: old } = await supabase.from("boarders").select("assigned_bed_id").eq("id", boarder.id).single();
         const { error } = await supabase.from("boarders").update({
-            full_name: boarder.fullName, contact_number: boarder.contactNumber, email: boarder.email,
-            address: boarder.address, emergency_contact: boarder.emergencyContact,
-            assigned_room_id: boarder.assignedRoomId, assigned_bed_id: boarder.assignedBedId,
-            status: boarder.status, occupation: boarder.occupation,
+            full_name: boarder.fullName,
+            contact_number: boarder.contactNumber,
+            email: boarder.email,
+            address: boarder.address,
+            emergency_contact: boarder.emergencyContact,
+            assigned_room_id: boarder.assignedRoomId,
+            assigned_bed_id: boarder.assignedBedId,
+            status: boarder.status,
+            occupation: boarder.occupation,
+            gender: boarder.gender,
             profile_photo: boarder.profilePhoto,
         }).eq("id", boarder.id);
 

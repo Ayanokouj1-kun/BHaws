@@ -17,7 +17,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [readNotifs, setReadNotifs] = useState<string[]>([]);
+  const [readNotifs, setReadNotifs] = useState<string[]>(() => {
+    // Load persisted read notifications from localStorage
+    try {
+      const saved = localStorage.getItem("bhaws_read_notifications");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +78,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   const markAllRead = () => {
-    setReadNotifs(notifications.map(n => n.id));
+    const allIds = notifications.map(n => n.id);
+    setReadNotifs(allIds);
+    // Persist to localStorage
+    localStorage.setItem("bhaws_read_notifications", JSON.stringify(allIds));
     toast.success("All notifications marked as read");
   };
 
@@ -133,23 +144,33 @@ export function AppLayout({ children }: AppLayoutProps) {
                           All caught up!
                         </div>
                       ) : (
-                        notifications.map(n => (
-                          <div
-                            key={n.id}
-                            className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/30 ${!readNotifs.includes(n.id) ? "bg-accent/5" : ""}`}
-                          >
-                            <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${notifColors[n.type]}`}>
-                              {notifLabels[n.type]}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground leading-snug">{n.message}</p>
-                              {n.time && <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>}
+                        notifications.map(n => {
+                          const isRead = readNotifs.includes(n.id);
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                if (!isRead) {
+                                  const updated = [...readNotifs, n.id];
+                                  setReadNotifs(updated);
+                                  localStorage.setItem("bhaws_read_notifications", JSON.stringify(updated));
+                                }
+                              }}
+                              className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer ${!isRead ? "bg-accent/5" : ""}`}
+                            >
+                              <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${notifColors[n.type]}`}>
+                                {notifLabels[n.type]}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-foreground leading-snug">{n.message}</p>
+                                {n.time && <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>}
+                              </div>
+                              {!isRead && (
+                                <span className="mt-1.5 h-2 w-2 rounded-full bg-accent shrink-0" />
+                              )}
                             </div>
-                            {!readNotifs.includes(n.id) && (
-                              <span className="mt-1.5 h-2 w-2 rounded-full bg-accent shrink-0" />
-                            )}
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                     <div className="px-4 py-2.5 border-t border-border/60">
@@ -200,13 +221,12 @@ export function AppLayout({ children }: AppLayoutProps) {
                     <div className="py-1.5">
                       <button
                         onClick={() => {
-                          if (user?.role === "Boarder") navigate(`/boarders/${user.boarderId}`);
-                          else navigate("/settings");
+                          navigate("/account");
                           setProfileOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                       >
-                        <User className="h-4 w-4 text-muted-foreground" /> {user?.role === "Boarder" ? "My Profile" : "Settings"}
+                        <User className="h-4 w-4 text-muted-foreground" /> My Account
                       </button>
                     </div>
                     <div className="py-1.5 border-t border-border/60">

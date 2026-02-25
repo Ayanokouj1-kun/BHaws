@@ -36,6 +36,7 @@ export interface Boarder {
   status: "Active" | "Inactive" | "Evicted";
   profilePhoto?: string;
   occupation?: string;
+  gender?: "Male" | "Female" | "Other";
   createdAt: string;
 }
 
