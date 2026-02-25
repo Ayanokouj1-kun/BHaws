@@ -302,7 +302,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             await supabase.from("beds").update({ boarder_id: nb.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
         }
         toast.success("Boarder added");
-        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} registered.`);
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${room?.name || 'a room'}.`);
         refreshData();
     };
 
@@ -328,6 +328,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (boarder.assignedBedId) await supabase.from("beds").update({ boarder_id: boarder.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
         }
         toast.success("Boarder updated");
+        addLog("Boarder Updated", "Boarder", boarder.id, `Profile for ${boarder.fullName} was updated.`);
         refreshData();
     };
 
@@ -353,6 +354,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
 
         toast.success("Boarder removed");
+        addLog("Boarder Removed", "Boarder", id, `Records for boarder ID ${id} were permanently removed.`);
         refreshData();
     };
 
@@ -366,7 +368,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             receipt_number: payment.receiptNumber || generateReceiptNumber(),
         }]);
         if (error) toast.error("Failed to record payment");
-        else { toast.success("Payment recorded"); refreshData(); }
+        else {
+            toast.success("Payment recorded");
+            addLog("Payment Recorded", "Payment", payment.boarderId, `Recorded₱${payment.amount} ${payment.type} for ${payment.month}.`);
+            refreshData();
+        }
     };
 
     const updatePayment = async (payment: Payment) => {
@@ -375,13 +381,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             receipt_number: payment.receiptNumber, notes: payment.notes
         }).eq("id", payment.id);
         if (error) toast.error("Failed to update payment");
-        else { toast.success("Payment updated"); refreshData(); }
+        else {
+            toast.success("Payment updated");
+            addLog("Payment Updated", "Payment", payment.id, `Payment status updated to ${payment.status}.`);
+            refreshData();
+        }
     };
 
     const deletePayment = async (id: string) => {
         const { error } = await supabase.from("payments").delete().eq("id", id);
         if (error) toast.error("Failed to delete payment");
-        else { toast.success("Payment deleted"); refreshData(); }
+        else {
+            toast.success("Payment deleted");
+            addLog("Payment Deleted", "Payment", id, `Payment record ID ${id} was deleted.`);
+            refreshData();
+        }
     };
 
     // --- MAINTENANCE ---
@@ -391,7 +405,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             description: req.description, priority: req.priority, status: req.status
         }]);
         if (error) toast.error("Failed to submit request");
-        else { toast.success("Request submitted"); refreshData(); }
+        else {
+            toast.success("Request submitted");
+            addLog("Maintenance Requested", "Maintenance", req.roomId, `New request: ${req.title}`);
+            refreshData();
+        }
     };
 
     const updateMaintenance = async (req: MaintenanceRequest) => {
@@ -400,7 +418,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             resolved_at: req.status === "Resolved" ? new Date().toISOString() : null
         }).eq("id", req.id);
         if (error) toast.error("Failed to update status");
-        else { toast.success("Status updated"); refreshData(); }
+        else {
+            toast.success("Status updated");
+            addLog("Maintenance Updated", "Maintenance", req.id, `Request status changed to ${req.status}.`);
+            refreshData();
+        }
     };
 
     const deleteMaintenance = async (id: string) => {
@@ -415,7 +437,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             amount: expense.amount, date: expense.date, paid_by: expense.paidBy
         }]);
         if (error) toast.error("Failed to record expense");
-        else { toast.success("Expense recorded"); refreshData(); }
+        else {
+            toast.success("Expense recorded");
+            addLog("Expense Recorded", "Expense", expense.category, `Recorded ₱${expense.amount} for ${expense.description}.`);
+            refreshData();
+        }
     };
 
     const updateExpense = async (expense: Expense) => {
@@ -436,11 +462,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         await supabase.from("announcements").insert([{
             title: ann.title, message: ann.message, priority: ann.priority, expires_at: ann.expiresAt
         }]);
+        addLog("Announcement Posted", "Announcement", ann.id, `New announcement: ${ann.title}`);
         refreshData();
     };
 
     const deleteAnnouncement = async (id: string) => {
-        await supabase.from("announcements").delete().eq("id", id);
+        const { error } = await supabase.from("announcements").delete().eq("id", id);
+        if (!error) addLog("Announcement Deleted", "Announcement", id, `Announcement was removed.`);
         refreshData();
     };
 
@@ -453,7 +481,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             late_fee_amount: newSettings.lateFeeAmount, grace_period_days: newSettings.gracePeriodDays
         }).eq("id", 1);
         if (error) toast.error("Failed to save settings");
-        else { toast.success("Settings saved"); refreshData(); }
+        else {
+            toast.success("Settings saved");
+            addLog("Settings Updated", "Settings", "1", "System global settings were updated.");
+            refreshData();
+        }
     };
 
     // --- UTILS ---

@@ -35,6 +35,9 @@ const AuditLogsPage = () => {
       case "Boarder": return "👤";
       case "Room": return "🏠";
       case "Payment": return "💰";
+      case "Maintenance": return "🔧";
+      case "Expense": return "📉";
+      case "Announcement": return "📢";
       default: return "⚙️";
     }
   };
@@ -106,6 +109,9 @@ const AuditLogsPage = () => {
               <SelectItem value="Boarder">Boarders</SelectItem>
               <SelectItem value="Room">Rooms</SelectItem>
               <SelectItem value="Payment">Payments</SelectItem>
+              <SelectItem value="Maintenance">Maintenance</SelectItem>
+              <SelectItem value="Expense">Expenses</SelectItem>
+              <SelectItem value="Announcement">Announcements</SelectItem>
               <SelectItem value="Settings">Settings</SelectItem>
             </SelectContent>
           </Select>
