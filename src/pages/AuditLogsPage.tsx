@@ -11,7 +11,8 @@ import { generateCSV } from "@/utils/csvGenerator";
 import { generatePDF } from "@/utils/pdfGenerator";
 
 const AuditLogsPage = () => {
-  const { auditLogs, isLoading, settings } = useData();
+  const { auditLogs, isLoading, settings, rooms, boarders, payments, addLog } = useData();
+  const [isSyncing, setIsSyncing] = useState(false);
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
 
@@ -67,6 +68,45 @@ const AuditLogsPage = () => {
     }
   };
 
+  const handleSyncLogs = async () => {
+    setIsSyncing(true);
+    toast.info("Checking for untracked records...");
+
+    let count = 0;
+    try {
+      const loggedIds = new Set(auditLogs.map(l => l.entityId));
+
+      for (const room of rooms) {
+        if (!loggedIds.has(room.id)) {
+          await addLog("Initial Record", "Room", room.id, `Existing room "${room.name}" detected in system.`);
+          count++;
+        }
+      }
+
+      for (const boarder of boarders) {
+        if (!loggedIds.has(boarder.id)) {
+          await addLog("Initial Record", "Boarder", boarder.id, `Existing boarder "${boarder.fullName}" detected in system.`);
+          count++;
+        }
+      }
+
+      for (const p of payments) {
+        const pId = String(p.id);
+        if (!loggedIds.has(pId)) {
+          await addLog("Initial Record", "Payment", pId, `Existing ${p.status} payment for ${p.month} detected.`);
+          count++;
+        }
+      }
+
+      if (count > 0) toast.success(`Successfully synced ${count} missing records to audit logs!`);
+      else toast.info("Audit logs are already up to date with existing records.");
+    } catch (err) {
+      toast.error("Sync failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
 
   return (
@@ -78,6 +118,9 @@ const AuditLogsPage = () => {
             <p className="page-subtitle">Track every change and action within the system</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleSyncLogs} disabled={isSyncing}>
+              <Clock className="h-4 w-4" /> {isSyncing ? "Syncing..." : "Sync Logs"}
+            </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExportLogs("CSV")}>
               <ArrowDownToLine className="h-4 w-4" /> CSV
             </Button>
@@ -123,7 +166,7 @@ const AuditLogsPage = () => {
             Recent Activity
           </div>
 
-          <div className="grid gap-3">
+          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
             {filtered.map((log) => (
               <div key={log.id} className="stat-card flex items-start gap-4 hover:shadow-md transition-all group border-border/60">
                 <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center text-lg shrink-0 group-hover:bg-accent/5 transition-colors">
@@ -154,18 +197,19 @@ const AuditLogsPage = () => {
                 </div>
               </div>
             ))}
-
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
-                <Search className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground font-medium">No activity logs found matching your criteria</p>
-                <Button variant="link" onClick={() => { setSearch(""); setEntityFilter("all"); }} className="mt-2 text-accent">Clear all filters</Button>
-              </div>
-            )}
           </div>
+
+          {filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
+              <Search className="h-10 w-10 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground font-medium">No activity logs found matching your criteria</p>
+              <Button variant="link" onClick={() => { setSearch(""); setEntityFilter("all"); }} className="mt-2 text-accent">Clear all filters</Button>
+            </div>
+          )}
         </div>
       </div>
-    </AppLayout>
+    </div>
+    </AppLayout >
   );
 };
 
