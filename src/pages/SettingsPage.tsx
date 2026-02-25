@@ -191,23 +191,27 @@ const SettingsPage = () => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="pt-4 space-y-3">
+          <CardContent className="pt-4">
             {announcements.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-6">No announcements posted yet.</p>
             )}
-            {announcements.map(ann => (
-              <div key={ann.id} className="flex items-start gap-3 p-4 rounded-xl bg-muted/20 border border-border/40">
-                <Badge variant="outline" className={`shrink-0 text-[10px] font-bold uppercase ${priorityColors[ann.priority]}`}>{ann.priority}</Badge>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{ann.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{ann.message}</p>
-                  <p className="text-[9px] text-muted-foreground/50 mt-1 uppercase tracking-wider">{ann.createdAt}</p>
-                </div>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => deleteAnnouncement(ann.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
+            <div className="max-h-[420px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+              {[...announcements]
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .map(ann => (
+                  <div key={ann.id} className="flex items-start gap-3 p-4 rounded-xl bg-muted/20 border border-border/40 shrink-0">
+                    <Badge variant="outline" className={`shrink-0 text-[10px] font-bold uppercase ${priorityColors[ann.priority]}`}>{ann.priority}</Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{ann.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{ann.message}</p>
+                      <p className="text-[9px] text-muted-foreground/50 mt-1 uppercase tracking-wider">{ann.createdAt}</p>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive shrink-0" onClick={() => deleteAnnouncement(ann.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+            </div>
           </CardContent>
         </Card>
 
