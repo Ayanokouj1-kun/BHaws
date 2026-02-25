@@ -246,22 +246,32 @@ const SettingsPage = () => {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Button onClick={handleBackup} variant="outline" className="gap-2 h-14 border-primary/20 hover:border-primary hover:bg-primary/5">
-                <Download className="h-4 w-4 text-primary" />
-                <div className="text-left">
-                  <p className="font-semibold text-sm">Download Backup</p>
-                  <p className="text-[10px] text-muted-foreground">Export as JSON format</p>
+              <button
+                onClick={handleBackup}
+                className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/5 hover:border-accent/30 focus-visible:ring-1 focus-visible:ring-accent outline-none transition-all text-left shadow-sm hover:shadow cursor-pointer"
+              >
+                <div className="p-2 bg-accent/10 rounded-lg shrink-0">
+                  <Download className="h-4 w-4 text-accent" />
                 </div>
-              </Button>
+                <div>
+                  <p className="font-semibold text-sm text-foreground">Download Backup</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Export as JSON format</p>
+                </div>
+              </button>
               <div>
                 <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
-                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="gap-2 h-14 w-full">
-                  <Upload className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-left">
-                    <p className="font-semibold text-sm">Restore from File</p>
-                    <p className="text-[10px] text-muted-foreground">Upload previous JSON backup</p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 focus-visible:ring-1 focus-visible:ring-ring outline-none transition-all text-left shadow-sm hover:shadow cursor-pointer"
+                >
+                  <div className="p-2 bg-muted rounded-lg shrink-0">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </Button>
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">Restore from File</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Upload previous JSON backup</p>
+                  </div>
+                </button>
               </div>
             </div>
           </CardContent>
