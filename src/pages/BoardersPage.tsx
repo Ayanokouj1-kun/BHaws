@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X } from "lucide-react";
+import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -348,7 +348,20 @@ const BoardersPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
                   <div className="grid gap-2">
                     <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Room *</Label>
-                    <Select value={currentBoarder.assignedRoomId} onValueChange={(val) => setCurrentBoarder({ ...currentBoarder, assignedRoomId: val, assignedBedId: "" })}>
+                    <Select
+                      value={currentBoarder.assignedRoomId}
+                      onValueChange={(val) => {
+                        const room = rooms.find(r => r.id === val);
+                        const rate = room?.monthlyRate ?? 0;
+                        setCurrentBoarder({
+                          ...currentBoarder,
+                          assignedRoomId: val,
+                          assignedBedId: "",
+                          depositAmount: rate,
+                          advanceAmount: 0,
+                        });
+                      }}
+                    >
                       <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
                       <SelectContent>
                         {rooms.map((r) => (
@@ -489,34 +502,74 @@ const BoardersPage = () => {
               {/* Finance */}
               <div className="space-y-3">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Initial Payments</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-1.5">
-                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Advance (₱)</Label>
-                    <Input
-                      type="number"
-                      value={currentBoarder.advanceAmount}
-                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, advanceAmount: Number(e.target.value) })}
-                      className="h-9 px-3 text-xs bg-card"
-                    />
+
+                {/* Room rate info */}
+                {selectedRoom && (
+                  <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/40 px-3 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Room Rate</span>
+                    <span className="text-xs font-bold text-foreground">₱{selectedRoom.monthlyRate.toLocaleString()} / mo</span>
                   </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Deposit — manually entered */}
                   <div className="grid gap-1.5">
                     <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Deposit (₱)</Label>
                     <Input
                       type="number"
                       value={currentBoarder.depositAmount}
-                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, depositAmount: Number(e.target.value) })}
+                      onChange={(e) => {
+                        const deposit = Number(e.target.value);
+                        const rate = selectedRoom?.monthlyRate ?? 0;
+                        const advance = deposit > rate ? deposit - rate : 0;
+                        setCurrentBoarder({ ...currentBoarder, depositAmount: deposit, advanceAmount: advance });
+                      }}
                       className="h-9 px-3 text-xs bg-card"
                     />
                   </div>
+
+                  {/* Advance — auto-calculated */}
+                  <div className="grid gap-1.5">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                      Advance (₱)
+                      <span className="text-[8px] text-accent font-semibold normal-case tracking-normal">(auto)</span>
+                    </Label>
+                    <div className="flex items-center h-9 px-3 rounded-md border border-border/60 bg-muted/30 text-xs font-mono text-foreground">
+                      <span className="flex-1">{(currentBoarder.advanceAmount ?? 0).toLocaleString()}</span>
+                      <Lock className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Payment summary pill */}
-                <div className="flex items-center justify-between rounded-xl bg-accent/5 border border-accent/20 px-4 py-2.5">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total Collected</span>
-                  <span className="text-sm font-bold text-accent">
-                    ₱{((currentBoarder.advanceAmount ?? 0) + (currentBoarder.depositAmount ?? 0)).toLocaleString()}
-                  </span>
+                {/* Breakdown summary */}
+                <div className="rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 space-y-1.5">
+                  {selectedRoom && (
+                    <div className="flex justify-between text-[9px]">
+                      <span className="text-muted-foreground font-bold uppercase tracking-widest">Covers Rent</span>
+                      <span className="font-bold text-foreground">
+                        {(currentBoarder.depositAmount ?? 0) >= selectedRoom.monthlyRate ? "✓ 1 month" : `₱${((currentBoarder.depositAmount ?? 0)).toLocaleString()} of ₱${selectedRoom.monthlyRate.toLocaleString()}`}
+                      </span>
+                    </div>
+                  )}
+                  {(currentBoarder.advanceAmount ?? 0) > 0 && (
+                    <div className="flex justify-between text-[9px]">
+                      <span className="text-muted-foreground font-bold uppercase tracking-widest">Advance Credit</span>
+                      <span className="font-bold text-accent">₱{(currentBoarder.advanceAmount ?? 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[9px] border-t border-accent/20 pt-1.5 mt-1">
+                    <span className="text-muted-foreground font-bold uppercase tracking-widest">Total Collected</span>
+                    <span className="font-bold text-accent text-sm">
+                      ₱{((currentBoarder.advanceAmount ?? 0) + (currentBoarder.depositAmount ?? 0)).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
+
+                {selectedRoom && (currentBoarder.depositAmount ?? 0) < selectedRoom.monthlyRate && (currentBoarder.depositAmount ?? 0) > 0 && (
+                  <p className="text-[9px] text-warning font-semibold">
+                    ⚠ Deposit is below room rate — ₱{(selectedRoom.monthlyRate - (currentBoarder.depositAmount ?? 0)).toLocaleString()} short
+                  </p>
+                )}
               </div>
             </div>
           </div>
