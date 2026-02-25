@@ -150,7 +150,7 @@ const PaymentsPage = () => {
                 <TableHead>Boarder</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Period</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead className="whitespace-nowrap">Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[150px]">Actions</TableHead>
               </TableRow>
@@ -174,7 +174,7 @@ const PaymentsPage = () => {
                   <TableCell className="font-bold">₱{p.amount.toLocaleString()}</TableCell>
                   <TableCell className="text-sm">{p.month}</TableCell>
                   <TableCell>
-                    <span className="text-xs font-semibold px-2 py-1 rounded-md bg-muted text-muted-foreground border border-border/50">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-md bg-muted text-muted-foreground border border-border/50 whitespace-nowrap">
                       {p.type}
                     </span>
                   </TableCell>
