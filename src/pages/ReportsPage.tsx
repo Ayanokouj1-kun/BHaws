@@ -1,11 +1,13 @@
 import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
-import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, DollarSign } from "lucide-react";
+import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, DollarSign, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { generatePDF } from "@/utils/pdfGenerator";
 import { generateCSV } from "@/utils/csvGenerator";
@@ -15,6 +17,9 @@ type ReportType = "summary" | "income" | "unpaid" | "occupancy" | "history";
 const ReportsPage = () => {
   const { rooms, boarders, payments, isLoading, settings } = useData();
   const [active, setActive] = useState<ReportType>("summary");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage, setHistoryPerPage] = useState(25);
+  const [historySearch, setHistorySearch] = useState("");
 
   const tabs: { key: ReportType; label: string; icon: React.ElementType }[] = [
     { key: "summary", label: "Financial Summary", icon: CreditCard },
@@ -270,9 +275,8 @@ const ReportsPage = () => {
                             <p className="font-bold text-base text-foreground leading-tight">{name}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <span
-                                className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${
-                                  p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"
-                                }`}
+                                className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"
+                                  }`}
                               >
                                 {p.status}
                               </span>
@@ -349,61 +353,181 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {active === "history" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-xl text-foreground">Transaction Logs</h3>
-                  <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest font-semibold opacity-60">Full Collection History</p>
+          {active === "history" && (() => {
+            // Sort all payments by date (newest first)
+            const allSorted = [...payments].sort((a, b) => {
+              const dateA = new Date(a.paidDate || a.date || 0).getTime();
+              const dateB = new Date(b.paidDate || b.date || 0).getTime();
+              return dateB - dateA;
+            });
+
+            // Filter by search
+            const filtered = allSorted.filter(p => {
+              if (!historySearch) return true;
+              const q = historySearch.toLowerCase();
+              const name = getBoarderName(p.boarderId).toLowerCase();
+              return (
+                name.includes(q) ||
+                (p.receiptNumber || "").toLowerCase().includes(q) ||
+                p.type.toLowerCase().includes(q) ||
+                p.status.toLowerCase().includes(q) ||
+                (p.month || "").toLowerCase().includes(q)
+              );
+            });
+
+            const totalEntries = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalEntries / historyPerPage));
+            const safePage = Math.min(historyPage, totalPages);
+            const startIdx = (safePage - 1) * historyPerPage;
+            const pageItems = filtered.slice(startIdx, startIdx + historyPerPage);
+
+            const statusColor = (s: string) => {
+              if (s === "Paid") return "bg-success/10 text-success border-success/20";
+              if (s === "Overdue") return "bg-destructive/10 text-destructive border-destructive/20";
+              return "bg-warning/10 text-warning border-warning/20";
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-xl text-foreground">Transaction Logs</h3>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest font-semibold opacity-60">Full Payment History</p>
+                  </div>
+                  <div className="text-[10px] font-black text-muted-foreground uppercase bg-muted px-4 py-1.5 rounded-full border border-border/50">
+                    {totalEntries.toLocaleString()} {totalEntries === 1 ? "Entry" : "Entries"} recorded
+                  </div>
                 </div>
-                <div className="text-[10px] font-black text-muted-foreground uppercase bg-muted px-4 py-1.5 rounded-full border border-border/50">
-                  {paidPayments.length} Entries recorded
+
+                {/* Search + Per-page controls */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, receipt, type..."
+                      value={historySearch}
+                      onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                      className="pl-9 bg-card border-border/60"
+                    />
+                  </div>
+                  <Select value={String(historyPerPage)} onValueChange={(v) => { setHistoryPerPage(Number(v)); setHistoryPage(1); }}>
+                    <SelectTrigger className="w-[130px] bg-card border-border/60">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="25">25 per page</SelectItem>
+                      <SelectItem value="50">50 per page</SelectItem>
+                      <SelectItem value="100">100 per page</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div className="border border-border/40 rounded-3xl overflow-hidden shadow-sm bg-muted/10">
-                <div className="grid grid-cols-4 gap-4 px-8 py-5 border-b border-border/40 bg-muted/40 text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em]">
-                  <span>Detail</span>
-                  <span>Boarder</span>
-                  <span>Amount</span>
-                  <span className="text-right">Timestamp</span>
-                </div>
-                <div className="divide-y divide-border/20">
-                  {paidPayments.map((p) => {
-                    const b = getBoarder(p.boarderId);
-                    const name = b?.fullName ?? getBoarderName(p.boarderId);
-                    return (
-                      <div key={p.id} className="grid grid-cols-4 gap-4 px-8 py-5 hover:bg-card hover:translate-x-1 transition-all duration-200">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-foreground truncate">{p.type}</span>
-                          <span className="text-[10px] text-muted-foreground font-bold font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
-                        </div>
-                        <div className="flex items-center text-sm font-semibold text-foreground truncate gap-2">
-                          <div className="h-6 w-6 rounded-lg bg-accent/5 flex items-center justify-center text-[9px] font-black text-accent border border-accent/10 overflow-hidden">
-                            {b?.profilePhoto ? (
-                              <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
-                            ) : (
-                              name.charAt(0)
-                            )}
+
+                {/* Table */}
+                <div className="border border-border/40 rounded-3xl overflow-hidden shadow-sm bg-muted/10">
+                  <div className="grid grid-cols-5 gap-4 px-8 py-5 border-b border-border/40 bg-muted/40 text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em]">
+                    <span>Detail</span>
+                    <span>Boarder</span>
+                    <span>Amount</span>
+                    <span>Status</span>
+                    <span className="text-right">Timestamp</span>
+                  </div>
+                  <div className="divide-y divide-border/20">
+                    {pageItems.map((p) => {
+                      const b = getBoarder(p.boarderId);
+                      const name = b?.fullName ?? getBoarderName(p.boarderId);
+                      return (
+                        <div key={p.id} className="grid grid-cols-5 gap-4 px-8 py-5 hover:bg-card hover:translate-x-1 transition-all duration-200">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-foreground truncate">{p.type}</span>
+                            <span className="text-[10px] text-muted-foreground font-bold font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
                           </div>
-                          {name}
+                          <div className="flex items-center text-sm font-semibold text-foreground truncate gap-2">
+                            <div className="h-6 w-6 rounded-lg bg-accent/5 flex items-center justify-center text-[9px] font-black text-accent border border-accent/10 overflow-hidden shrink-0">
+                              {b?.profilePhoto ? (
+                                <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
+                              ) : (
+                                name.charAt(0)
+                              )}
+                            </div>
+                            <span className="truncate">{name}</span>
+                          </div>
+                          <span className={`text-base font-black self-center tracking-tight ${p.status === "Paid" ? "text-success" : p.status === "Overdue" ? "text-destructive" : "text-warning"}`}>₱{p.amount.toLocaleString()}</span>
+                          <div className="self-center">
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase ${statusColor(p.status)}`}>
+                              {p.status}
+                            </Badge>
+                          </div>
+                          <div className="text-right self-center">
+                            <span className="text-xs font-bold text-muted-foreground">{p.paidDate || p.date}</span>
+                            {p.month && <p className="text-[9px] text-muted-foreground/50 mt-0.5">{p.month}</p>}
+                          </div>
                         </div>
-                        <span className="text-base font-black text-success self-center tracking-tight">₱{p.amount.toLocaleString()}</span>
-                        <div className="text-right self-center">
-                          <span className="text-xs font-bold text-muted-foreground">{p.paidDate || p.date}</span>
-                        </div>
+                      );
+                    })}
+                    {totalEntries === 0 && (
+                      <div className="py-24 flex flex-col items-center justify-center text-muted-foreground italic text-sm">
+                        <Calendar className="h-12 w-12 opacity-5 mb-4" />
+                        {historySearch ? "No matching entries found" : "No payment history found"}
                       </div>
-                    );
-                  })}
-                  {paidPayments.length === 0 && (
-                    <div className="py-24 flex flex-col items-center justify-center text-muted-foreground italic text-sm">
-                      <Calendar className="h-12 w-12 opacity-5 mb-4" />
-                      No payment history found
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Showing <span className="font-bold text-foreground">{startIdx + 1}</span>–<span className="font-bold text-foreground">{Math.min(startIdx + historyPerPage, totalEntries)}</span> of <span className="font-bold text-foreground">{totalEntries.toLocaleString()}</span>
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={safePage <= 1}
+                        onClick={() => setHistoryPage(safePage - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                        let page: number;
+                        if (totalPages <= 7) {
+                          page = i + 1;
+                        } else if (safePage <= 4) {
+                          page = i + 1;
+                        } else if (safePage >= totalPages - 3) {
+                          page = totalPages - 6 + i;
+                        } else {
+                          page = safePage - 3 + i;
+                        }
+                        return (
+                          <Button
+                            key={page}
+                            variant={safePage === page ? "default" : "outline"}
+                            size="icon"
+                            className="h-8 w-8 text-xs"
+                            onClick={() => setHistoryPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={safePage >= totalPages}
+                        onClick={() => setHistoryPage(safePage + 1)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </AppLayout>
