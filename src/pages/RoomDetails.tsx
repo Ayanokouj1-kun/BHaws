@@ -86,15 +86,6 @@ const RoomDetails = () => {
                                     <p className="text-lg font-bold text-success tracking-tight">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
                                 </div>
                             </div>
-
-                            <div className="space-y-4 pt-4 border-t border-border/40">
-                                <div className="flex items-start gap-3">
-                                    <Info className="h-4 w-4 text-accent mt-0.5" />
-                                    <p className="text-xs text-muted-foreground leading-relaxed">
-                                        Room status is automatically managed based on bed availability. Changes to room capacity will regenerate bed identifiers.
-                                    </p>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -163,6 +154,12 @@ const RoomDetails = () => {
                                         <span className="text-sm">Utility Meter Access</span>
                                         <Badge variant="outline">Shared (Hallway 2)</Badge>
                                     </div>
+                                </div>
+                                <div className="flex items-start gap-3 mt-6 pt-6 border-t border-border/40">
+                                    <Info className="h-4 w-4 text-accent mt-0.5" />
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                        Room status is automatically managed based on bed availability. Changes to room capacity will regenerate bed identifiers.
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>
