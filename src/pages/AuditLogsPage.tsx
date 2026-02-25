@@ -208,7 +208,6 @@ const AuditLogsPage = () => {
           )}
         </div>
       </div>
-    </div>
     </AppLayout >
   );
 };
