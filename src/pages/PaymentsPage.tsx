@@ -161,8 +161,12 @@ const PaymentsPage = () => {
                   <TableCell className="font-mono text-[10px] text-muted-foreground uppercase">{p.receiptNumber}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold">
-                        {getBoarderName(p.boarderId).charAt(0)}
+                      <div className="h-8 w-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-xs font-bold overflow-hidden shadow-sm">
+                        {boarders.find(b => b.id === p.boarderId)?.profilePhoto ? (
+                          <img src={boarders.find(b => b.id === p.boarderId)?.profilePhoto} className="h-full w-full object-cover" alt="" />
+                        ) : (
+                          getBoarderName(p.boarderId).charAt(0)
+                        )}
                       </div>
                       <span className="font-medium text-sm">{getBoarderName(p.boarderId)}</span>
                     </div>
