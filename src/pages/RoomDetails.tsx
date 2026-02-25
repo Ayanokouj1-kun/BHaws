@@ -41,12 +41,7 @@ const RoomDetails = () => {
                         <p className="page-subtitle">Detailed Room Status & Occupancy</p>
                     </div>
                     <div className="ml-auto flex gap-2">
-                        <Button variant="outline" className="gap-2">
-                            <Users className="h-4 w-4" /> Guest View
-                        </Button>
-                        <Button className="gap-2">
-                            Edit Room
-                        </Button>
+                        {/* Placeholder for future actions */}
                     </div>
                 </div>
 
@@ -81,14 +76,14 @@ const RoomDetails = () => {
                                 </p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-muted/30 border border-border/30 text-center">
-                                    <p className="text-xs text-muted-foreground uppercase mb-1">Potential</p>
-                                    <p className="text-lg font-bold">₱{(room.monthlyRate * room.capacity).toLocaleString()}</p>
+                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-4 rounded-xl bg-muted/30 border border-border/30 text-center overflow-hidden">
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Potential</p>
+                                    <p className="text-sm sm:text-base font-bold truncate">₱{(room.monthlyRate * room.capacity).toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 rounded-xl bg-success/5 border border-success/10 text-center">
-                                    <p className="text-xs text-success uppercase mb-1">Current</p>
-                                    <p className="text-lg font-bold text-success">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
+                                <div className="p-2 sm:p-4 rounded-xl bg-success/5 border border-success/10 text-center overflow-hidden">
+                                    <p className="text-[10px] sm:text-xs text-success uppercase mb-1">Current</p>
+                                    <p className="text-sm sm:text-base font-bold text-success truncate">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
                                 </div>
                             </div>
 
