@@ -362,7 +362,7 @@ const BoardersPage = () => {
                       }}
                     >
                       <SelectTrigger className="bg-card h-8 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent side="bottom" className="max-h-[250px]">
                         {rooms.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.name} ({r.beds.filter(bed => bed.status === "Available").length} av.)</SelectItem>
                         ))}
