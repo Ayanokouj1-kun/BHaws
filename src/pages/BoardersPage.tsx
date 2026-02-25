@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X, Lock } from "lucide-react";
+import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X, Lock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -130,6 +130,8 @@ const BoardersPage = () => {
   const selectedRoom = rooms.find(r => r.id === currentBoarder.assignedRoomId);
   const availableBeds = selectedRoom?.beds.filter(b => b.status === "Available" || b.id === currentBoarder.assignedBedId) || [];
 
+  const hasAvailableBeds = rooms.some(r => r.beds.some(b => b.status === "Available"));
+
   if (isLoading) return <AppLayout><div className="flex items-center justify-center h-full">Loading...</div></AppLayout>;
 
   return (
@@ -140,9 +142,17 @@ const BoardersPage = () => {
             <h1 className="page-header">Boarders</h1>
             <p className="page-subtitle">Directory of active and past residents</p>
           </div>
-          <Button className="gap-2 shadow-sm" onClick={handleOpenAdd}>
-            <Plus className="h-4 w-4" /> Add Boarder
-          </Button>
+          <div className="flex flex-col items-start sm:items-end">
+            <Button className="gap-2 shadow-sm" onClick={handleOpenAdd} disabled={!hasAvailableBeds}>
+              <Plus className="h-4 w-4" /> Add Boarder
+            </Button>
+            {!hasAvailableBeds && (
+              <p className="text-[10px] text-destructive mt-1.5 font-semibold text-right max-w-[200px] leading-tight flex items-start gap-1">
+                <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                All rooms are full. Add a new room or free up a bed first.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
