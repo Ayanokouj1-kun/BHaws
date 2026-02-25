@@ -331,11 +331,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         refreshData();
     };
 
+
     const deleteBoarder = async (id: string) => {
+        // 1. Find the boarder's assigned bed BEFORE deleting
+        const { data: boarderData } = await supabase
+            .from("boarders")
+            .select("assigned_bed_id")
+            .eq("id", id)
+            .single();
+
+        // 2. Delete the boarder
         const { error } = await supabase.from("boarders").delete().eq("id", id);
-        if (error) toast.error("Failed to remove boarder");
-        else { toast.success("Boarder removed"); refreshData(); }
+        if (error) { toast.error("Failed to remove boarder"); return; }
+
+        // 3. Free up the bed so the room shows correct availability
+        if (boarderData?.assigned_bed_id) {
+            await supabase
+                .from("beds")
+                .update({ status: "Available", boarder_id: null })
+                .eq("id", boarderData.assigned_bed_id);
+        }
+
+        toast.success("Boarder removed");
+        refreshData();
     };
+
 
     // --- PAYMENTS ---
     const addPayment = async (payment: Payment) => {
