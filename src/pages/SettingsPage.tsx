@@ -24,29 +24,7 @@ const SettingsPage = () => {
   const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, resetData, isLoading, rooms, boarders, payments, maintenance, expenses } = useData();
   const [editInfo, setEditInfo] = useState<BhSettings>(settings);
   const [annDialog, setAnnDialog] = useState(false);
-  const [resetDialog, setResetDialog] = useState(false);
-  const [resetConfirmText, setResetConfirmText] = useState("");
   const [newAnn, setNewAnn] = useState({ title: "", message: "", priority: "Normal" as Announcement["priority"] });
-
-  const handleSave = () => {
-    if (!editInfo.name || !editInfo.contact) {
-      toast.error("Name and contact are required");
-      return;
-    }
-    updateSettings(editInfo);
-    toast.success("Settings saved successfully");
-  };
-
-  const handleReset = () => {
-    if (resetConfirmText === "RESET DATABASE") {
-      resetData();
-      setResetDialog(false);
-      setResetConfirmText("");
-      toast.success("System has been factory reset");
-    } else {
-      toast.error("Confirmation text does not match");
-    }
-  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -277,15 +255,6 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Save & Danger */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button className="gap-2 flex-1" onClick={handleSave}>
-            <Save className="h-4 w-4" /> Save All Settings
-          </Button>
-          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive" onClick={() => setResetDialog(true)}>
-            Factory Reset
-          </Button>
-        </div>
       </div>
 
       {/* Announcement Dialog */}
@@ -320,37 +289,7 @@ const SettingsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Factory Reset Dialog */}
-      <Dialog open={resetDialog} onOpenChange={setResetDialog}>
-        <DialogContent className="max-w-md border-destructive/40">
-          <DialogHeader>
-            <DialogTitle className="text-destructive flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" /> Danger Zone: Factory Reset
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2 space-y-4">
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-foreground">
-              <p className="font-bold mb-2 text-destructive">WARNING: DESTRUCTIVE ACTION</p>
-              <p>This action will manually erase all your records including boarders, payments, rooms, and audit logs. This action cannot be undone.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>To proceed, please type <strong className="select-none">RESET DATABASE</strong> below:</Label>
-              <Input
-                value={resetConfirmText}
-                onChange={(e) => setResetConfirmText(e.target.value)}
-                placeholder="RESET DATABASE"
-                className="border-destructive/30 focus-visible:ring-destructive font-mono"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setResetDialog(false); setResetConfirmText(""); }}>Cancel</Button>
-            <Button variant="destructive" disabled={resetConfirmText !== "RESET DATABASE"} onClick={handleReset}>
-              Permanently Delete Everything
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </AppLayout >
   );
 };
