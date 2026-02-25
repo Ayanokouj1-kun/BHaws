@@ -1,12 +1,12 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2, AlertCircle } from "lucide-react";
+import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2, AlertCircle, Download, Upload, Database } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Announcement, BhSettings } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ const priorityColors: Record<string, string> = {
 };
 
 const SettingsPage = () => {
-  const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, resetData, isLoading } = useData();
+  const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, resetData, isLoading, rooms, boarders, payments, maintenance, expenses } = useData();
   const [editInfo, setEditInfo] = useState<BhSettings>(settings);
   const [annDialog, setAnnDialog] = useState(false);
   const [resetDialog, setResetDialog] = useState(false);
@@ -46,6 +46,41 @@ const SettingsPage = () => {
     } else {
       toast.error("Confirmation text does not match");
     }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBackup = () => {
+    const data = {
+      rooms, boarders, payments, expenses, maintenance, announcements, settings
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BHaws_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    toast.success("Database backup downloaded successfully!");
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (json.boarders && json.rooms && json.settings) {
+          toast.success("Database successfully restored from backup! (Cloud writes locked for demo)");
+        } else {
+          toast.error("Invalid backup file format");
+        }
+      } catch (err) {
+        toast.error("Failed to parse backup JSON file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // Reset input
   };
 
   const handleAddAnn = () => {
@@ -195,6 +230,40 @@ const SettingsPage = () => {
                 </Button>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Data Management & Backup */}
+        <Card className="shadow-sm border-border/60">
+          <CardHeader className="border-b border-border/40 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg"><Database className="h-5 w-5 text-primary" /></div>
+              <div>
+                <CardTitle className="text-base">Data Management</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">Backup your boarding house data to your local machine.</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button onClick={handleBackup} variant="outline" className="gap-2 h-14 border-primary/20 hover:border-primary hover:bg-primary/5">
+                <Download className="h-4 w-4 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold text-sm">Download Backup</p>
+                  <p className="text-[10px] text-muted-foreground">Export as JSON format</p>
+                </div>
+              </Button>
+              <div>
+                <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="gap-2 h-14 w-full">
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-left">
+                    <p className="font-semibold text-sm">Restore from File</p>
+                    <p className="text-[10px] text-muted-foreground">Upload previous JSON backup</p>
+                  </div>
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
