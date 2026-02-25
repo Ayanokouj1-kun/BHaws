@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode } fro
 import { Room, Boarder, Payment, AuditLog, BhSettings, MaintenanceRequest, Expense, Announcement, User } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { generateReceiptNumber } from "@/utils/receiptGenerator";
 
 interface DataContextType {
     rooms: Room[];
@@ -341,7 +342,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
-            method: payment.method, notes: payment.notes
+            method: payment.method, notes: payment.notes,
+            receipt_number: payment.receiptNumber || generateReceiptNumber(),
         }]);
         if (error) toast.error("Failed to record payment");
         else { toast.success("Payment recorded"); refreshData(); }

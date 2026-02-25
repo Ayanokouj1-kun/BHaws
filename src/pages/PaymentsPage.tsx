@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Printer, Trash2, Edit } from "lucide-react";
+import { Search, Plus, Printer, Trash2, Edit, Hash, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Payment } from "@/types";
 import { toast } from "sonner";
-
 import { generateReceipt } from "@/utils/pdfGenerator";
+import { generateReceiptNumber } from "@/utils/receiptGenerator";
 
 const PaymentsPage = () => {
   const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings } = useData();
@@ -72,7 +72,7 @@ const PaymentsPage = () => {
       month: new Date().toLocaleString('default', { month: 'long' }),
       type: "Monthly Rent",
       status: "Paid",
-      receiptNumber: `REC-${Math.floor(100000 + Math.random() * 900000)}`,
+      receiptNumber: generateReceiptNumber(),
     });
     setIsDialogOpen(true);
   };
@@ -191,7 +191,13 @@ const PaymentsPage = () => {
                           size="sm"
                           className="h-8 text-[11px] font-bold text-success hover:bg-success/5 px-1.5 shrink-0"
                           onClick={() => {
-                            updatePayment({ ...p, status: "Paid", paidDate: new Date().toISOString().split('T')[0], receivedBy: "Administrator" });
+                            updatePayment({
+                              ...p,
+                              status: "Paid",
+                              paidDate: new Date().toISOString().split('T')[0],
+                              receivedBy: "Administrator",
+                              receiptNumber: p.receiptNumber || generateReceiptNumber(),
+                            });
                             toast.success("Payment marked as paid");
                           }}
                         >
@@ -305,13 +311,16 @@ const PaymentsPage = () => {
                 </Select>
               </div>
             </div>
+            {/* Auto-generated receipt number — read only */}
             <div className="grid gap-2">
-              <Label htmlFor="receipt">Receipt Number</Label>
-              <Input
-                id="receipt"
-                value={currentPayment.receiptNumber}
-                onChange={(e) => setCurrentPayment({ ...currentPayment, receiptNumber: e.target.value })}
-              />
+              <Label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <Hash className="h-3 w-3" /> Receipt Number
+              </Label>
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-border/60 bg-muted/30 text-xs font-mono text-foreground">
+                <span className="flex-1 tracking-wider">{currentPayment.receiptNumber}</span>
+                <Lock className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+              </div>
+              <p className="text-[9px] text-muted-foreground">Auto-generated · cannot be edited</p>
             </div>
           </div>
           <DialogFooter>
