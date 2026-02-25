@@ -232,7 +232,7 @@ const BoardersPage = () => {
                   <TableCell className="hidden lg:table-cell">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Paid Total</span>
-                      <span className="text-xs font-bold text-success">₱{(b.advanceAmount + b.depositAmount).toLocaleString()}</span>
+                      <span className="text-xs font-bold text-success">₱{(b.depositAmount ?? 0).toLocaleString()}</span>
                     </div>
                   </TableCell>
                   <TableCell>
