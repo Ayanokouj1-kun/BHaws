@@ -402,15 +402,9 @@ const PaymentsPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Paid">
-                        <span className="flex items-center gap-2">✅ Paid</span>
-                      </SelectItem>
-                      <SelectItem value="Pending">
-                        <span className="flex items-center gap-2">⏳ Pending</span>
-                      </SelectItem>
-                      <SelectItem value="Overdue">
-                        <span className="flex items-center gap-2">🔴 Overdue</span>
-                      </SelectItem>
+                      <SelectItem value="Paid">Paid</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Overdue">Overdue</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -436,10 +430,10 @@ const PaymentsPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cash">💵 Cash</SelectItem>
-                      <SelectItem value="GCash">📱 GCash</SelectItem>
-                      <SelectItem value="Bank Transfer">🏦 Bank Transfer</SelectItem>
-                      <SelectItem value="Check">📑 Check</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="GCash">GCash</SelectItem>
+                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="Check">Check</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
