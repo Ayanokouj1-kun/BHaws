@@ -284,68 +284,67 @@ const BoardersPage = () => {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 sm:px-6 pt-5 pb-4 border-b border-border/50">
-            <div className="h-9 w-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-              <User className="h-4 w-4 text-accent" />
+          <div className="flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-border/50">
+            <div className="h-7 w-7 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+              <User className="h-3.5 w-3.5 text-accent" />
             </div>
             <div>
-              <DialogTitle className="text-sm sm:text-base font-bold">
+              <DialogTitle className="text-sm font-bold">
                 {mode === "add" ? "Register New Boarder" : "Edit Boarder Profile"}
               </DialogTitle>
-              <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">Fill in the details below</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5 hidden sm:block">Fill in the details below</p>
             </div>
           </div>
 
           {/* Body — stacked on mobile, side-by-side on md+ */}
-          <div className="flex flex-col md:flex-row md:divide-x md:divide-border/50 max-h-[80vh] md:max-h-[70vh] overflow-y-auto md:overflow-hidden">
+          <div className="flex flex-col md:flex-row md:divide-x md:divide-border/50 max-h-[65vh] md:max-h-[60vh] overflow-y-auto md:overflow-hidden">
 
             {/* ── LEFT PANEL: Photo + Accommodation ── */}
-            <div className="md:w-[240px] md:shrink-0 flex flex-col gap-5 px-4 sm:px-6 py-5 bg-muted/20 md:overflow-y-auto border-b border-border/40 md:border-b-0">
+            <div className="md:w-[200px] md:shrink-0 flex flex-col gap-3 px-3 sm:px-4 py-3 bg-muted/20 md:overflow-y-auto border-b border-border/40 md:border-b-0">
 
               {/* Profile Photo */}
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1.5">
                 <div className="relative group">
-                  <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-muted border-2 border-dashed border-border/60 flex items-center justify-center overflow-hidden transition-all hover:border-accent/50 shadow-sm">
+                  <div className="h-18 w-18 sm:h-20 sm:w-20 rounded-xl bg-muted border-2 border-dashed border-border/60 flex items-center justify-center overflow-hidden transition-all hover:border-accent/50 shadow-sm" style={{ height: '72px', width: '72px' }}>
                     {currentBoarder.profilePhoto ? (
                       <img src={currentBoarder.profilePhoto} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
-                      <User className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30" />
+                      <User className="h-8 w-8 text-muted-foreground/30" />
                     )}
                   </div>
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-xl shadow-md border border-border"
+                    className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-lg shadow-md border border-border"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Camera className="h-4 w-4" />
+                    <Camera className="h-3 w-3" />
                   </Button>
                   {currentBoarder.profilePhoto && (
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md"
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full shadow-md"
                       onClick={removePhoto}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2.5 w-2.5" />
                     </Button>
                   )}
                 </div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Profile Photo</p>
-                <p className="text-[9px] text-muted-foreground/60 text-center leading-tight">Max 2 MB · JPG, PNG</p>
+                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Photo</p>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
               </div>
 
               <div className="border-t border-border/40" />
 
               {/* Accommodation */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-accent">
                   <Home className="h-3 w-3" /> Accommodation
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
                   <div className="grid gap-2">
                     <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Room *</Label>
                     <Select
@@ -362,7 +361,7 @@ const BoardersPage = () => {
                         });
                       }}
                     >
-                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
+                      <SelectTrigger className="bg-card h-8 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
                       <SelectContent>
                         {rooms.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.name} ({r.beds.filter(bed => bed.status === "Available").length} av.)</SelectItem>
@@ -373,7 +372,7 @@ const BoardersPage = () => {
                   <div className="grid gap-2">
                     <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Bed *</Label>
                     <Select value={currentBoarder.assignedBedId} onValueChange={(val) => setCurrentBoarder({ ...currentBoarder, assignedBedId: val })} disabled={!currentBoarder.assignedRoomId}>
-                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select bed" /></SelectTrigger>
+                      <SelectTrigger className="bg-card h-8 text-xs"><SelectValue placeholder="Select bed" /></SelectTrigger>
                       <SelectContent>
                         {availableBeds.map((bed) => (
                           <SelectItem key={bed.id} value={bed.id}>{bed.name}</SelectItem>
@@ -387,7 +386,7 @@ const BoardersPage = () => {
               <div className="border-t border-border/40" />
 
               {/* Move-in + Status */}
-              <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
                 <div className="grid gap-2">
                   <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                     <Calendar className="h-3 w-3" /> Move-in Date
@@ -396,7 +395,7 @@ const BoardersPage = () => {
                     type="date"
                     value={currentBoarder.moveInDate}
                     onChange={(e) => setCurrentBoarder({ ...currentBoarder, moveInDate: e.target.value })}
-                    className="h-9 px-3 text-xs bg-card"
+                    className="h-8 px-2 text-xs bg-card"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -404,7 +403,7 @@ const BoardersPage = () => {
                     <ShieldCheck className="h-3 w-3" /> Status
                   </Label>
                   <Select value={currentBoarder.status} onValueChange={(val: any) => setCurrentBoarder({ ...currentBoarder, status: val })}>
-                    <SelectTrigger className="bg-card h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-card h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
@@ -416,13 +415,13 @@ const BoardersPage = () => {
             </div>
 
             {/* ── RIGHT PANEL: Personal Info ── */}
-            <div className="flex-1 flex flex-col gap-5 px-4 sm:px-6 py-5 md:overflow-y-auto">
+            <div className="flex-1 flex flex-col gap-3 px-3 sm:px-4 py-3 md:overflow-y-auto">
 
               {/* Personal Info */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Personal Information</p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
                     <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                       <User className="h-3 w-3" /> Full Name *
@@ -431,7 +430,7 @@ const BoardersPage = () => {
                       value={currentBoarder.fullName}
                       onChange={(e) => setCurrentBoarder({ ...currentBoarder, fullName: e.target.value })}
                       placeholder="Juan Dela Cruz"
-                      className="h-9 px-3 text-xs bg-card"
+                      className="h-8 px-2 text-xs bg-card"
                     />
                   </div>
                   <div className="grid gap-1.5">
@@ -440,7 +439,7 @@ const BoardersPage = () => {
                       value={currentBoarder.gender}
                       onValueChange={(val: "Male" | "Female" | "Other") => setCurrentBoarder({ ...currentBoarder, gender: val })}
                     >
-                      <SelectTrigger className="bg-card h-9 text-xs"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectTrigger className="bg-card h-8 text-xs"><SelectValue placeholder="Select gender" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Male">Male</SelectItem>
                         <SelectItem value="Female">Female</SelectItem>
@@ -450,7 +449,7 @@ const BoardersPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
                     <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                       <Phone className="h-3 w-3" /> Contact *
@@ -500,18 +499,18 @@ const BoardersPage = () => {
               <div className="border-t border-border/40" />
 
               {/* Finance */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Initial Payments</p>
 
                 {/* Room rate info */}
                 {selectedRoom && (
-                  <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/40 px-3 py-2">
+                  <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/40 px-2.5 py-1.5">
                     <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Room Rate</span>
                     <span className="text-xs font-bold text-foreground">₱{selectedRoom.monthlyRate.toLocaleString()} / mo</span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {/* Deposit — manually entered */}
                   <div className="grid gap-1.5">
                     <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Deposit (₱)</Label>
@@ -524,7 +523,7 @@ const BoardersPage = () => {
                         const advance = deposit > rate ? deposit - rate : 0;
                         setCurrentBoarder({ ...currentBoarder, depositAmount: deposit, advanceAmount: advance });
                       }}
-                      className="h-9 px-3 text-xs bg-card"
+                      className="h-8 px-2 text-xs bg-card"
                     />
                   </div>
 
@@ -534,7 +533,7 @@ const BoardersPage = () => {
                       Advance (₱)
                       <span className="text-[8px] text-accent font-semibold normal-case tracking-normal">(auto)</span>
                     </Label>
-                    <div className="flex items-center h-9 px-3 rounded-md border border-border/60 bg-muted/30 text-xs font-mono text-foreground">
+                    <div className="flex items-center h-8 px-2 rounded-md border border-border/60 bg-muted/30 text-xs font-mono text-foreground">
                       <span className="flex-1">{(currentBoarder.advanceAmount ?? 0).toLocaleString()}</span>
                       <Lock className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                     </div>
@@ -542,7 +541,7 @@ const BoardersPage = () => {
                 </div>
 
                 {/* Breakdown summary */}
-                <div className="rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 space-y-1.5">
+                <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 space-y-1">
                   {selectedRoom && (
                     <div className="flex justify-between text-[9px]">
                       <span className="text-muted-foreground font-bold uppercase tracking-widest">Covers Rent</span>
@@ -575,7 +574,7 @@ const BoardersPage = () => {
           </div>
 
           {/* Footer */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-border/50 bg-muted/10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-t border-border/50 bg-muted/10">
             <p className="text-[10px] text-muted-foreground">Fields marked * are required</p>
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="outline" className="rounded-xl flex-1 sm:flex-none" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
