@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Printer, Trash2, Edit, Hash, Lock } from "lucide-react";
+import { Search, Plus, Printer, Trash2, Edit, Hash, Lock, CalendarDays, CreditCard, Banknote, User, FileText, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,21 +13,31 @@ import { Payment } from "@/types";
 import { toast } from "sonner";
 import { generateReceipt } from "@/utils/pdfGenerator";
 import { generateReceiptNumber } from "@/utils/receiptGenerator";
+import { Textarea } from "@/components/ui/textarea";
 
 const PaymentsPage = () => {
-  const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings } = useData();
+  const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings, rooms } = useData();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
+
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+
   const [currentPayment, setCurrentPayment] = useState<Partial<Payment>>({
     boarderId: "",
     amount: 0,
-    date: new Date().toISOString().split('T')[0],
-    paidDate: new Date().toISOString().split('T')[0],
-    month: new Date().toLocaleString('default', { month: 'long' }),
+    date: today,
+    paidDate: today,
+    dueDate: "",
+    month: currentMonthYear,
     type: "Monthly Rent",
     status: "Paid",
+    method: "Cash",
+    receivedBy: "Administrator",
+    lateFee: 0,
+    notes: "",
     receiptNumber: "",
   });
 
@@ -66,16 +76,29 @@ const PaymentsPage = () => {
 
   const getBoarderName = (id: string) => boarders.find(b => b.id === id)?.fullName || "Unknown";
 
+  // Auto-fill amount when boarder is selected based on their room rate
+  const getDefaultAmountForBoarder = (boarderId: string): number => {
+    const boarder = boarders.find(b => b.id === boarderId);
+    if (!boarder?.roomId) return 0;
+    const room = rooms.find(r => r.id === boarder.roomId);
+    return room?.monthlyRate || 0;
+  };
+
   const handleOpenAdd = () => {
     setMode("add");
     setCurrentPayment({
       boarderId: "",
       amount: 0,
-      date: new Date().toISOString().split('T')[0],
-      paidDate: new Date().toISOString().split('T')[0],
-      month: new Date().toLocaleString('default', { month: 'long' }),
+      date: today,
+      paidDate: today,
+      dueDate: "",
+      month: currentMonthYear,
       type: "Monthly Rent",
       status: "Paid",
+      method: "Cash",
+      receivedBy: "Administrator",
+      lateFee: 0,
+      notes: "",
       receiptNumber: generateReceiptNumber(),
     });
     setIsDialogOpen(true);
@@ -88,20 +111,39 @@ const PaymentsPage = () => {
   };
 
   const handleSubmit = () => {
-    if (!currentPayment.boarderId || !currentPayment.amount || !currentPayment.month) {
-      toast.error("Please fill in all required fields");
+    if (!currentPayment.boarderId) {
+      toast.error("Please select a boarder");
       return;
+    }
+    if (!currentPayment.amount || currentPayment.amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    if (!currentPayment.month) {
+      toast.error("Please specify the billing month");
+      return;
+    }
+
+    // Auto-set paidDate when status is Paid and no paidDate is set
+    const paymentData = { ...currentPayment };
+    if (paymentData.status === "Paid" && !paymentData.paidDate) {
+      paymentData.paidDate = today;
+    }
+    // Clear paidDate if not Paid
+    if (paymentData.status !== "Paid") {
+      paymentData.paidDate = undefined;
     }
 
     if (mode === "add") {
       const payment: Payment = {
-        ...currentPayment as Payment,
+        ...paymentData as Payment,
         id: `p${Date.now()}`,
+        createdAt: new Date().toISOString(),
       };
       addPayment(payment);
       toast.success("Payment recorded successfully");
     } else {
-      updatePayment(currentPayment as Payment);
+      updatePayment(paymentData as Payment);
       toast.success("Payment updated successfully");
     }
 
@@ -242,84 +284,255 @@ const PaymentsPage = () => {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{mode === "add" ? "Record New Payment" : "Edit Payment Record"}</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2.5 text-lg">
+              <div className={`p-2 rounded-xl ${mode === "add" ? "bg-accent/10" : "bg-warning/10"}`}>
+                {mode === "add" ? <CreditCard className="h-4 w-4 text-accent" /> : <Edit className="h-4 w-4 text-warning" />}
+              </div>
+              {mode === "add" ? "Record New Payment" : "Edit Payment Record"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {mode === "add" ? "Fill in the details below to record a new payment transaction." : "Update the payment record details."}
+            </p>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Boarder *</Label>
-              <Select
-                value={currentPayment.boarderId}
-                onValueChange={(val) => setCurrentPayment({ ...currentPayment, boarderId: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Boarder" />
-                </SelectTrigger>
-                <SelectContent>
-                  {boarders.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.fullName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
+          <div className="space-y-5 py-2">
+
+            {/* ── Section 1: Boarder Selection ── */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <User className="h-3 w-3" /> Boarder Information
+              </h4>
               <div className="grid gap-2">
-                <Label htmlFor="amount">Amount (₱) *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={currentPayment.amount}
-                  onChange={(e) => setCurrentPayment({ ...currentPayment, amount: Number(e.target.value) })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="month">Billing Month *</Label>
-                <Input
-                  id="month"
-                  value={currentPayment.month}
-                  onChange={(e) => setCurrentPayment({ ...currentPayment, month: e.target.value })}
-                  placeholder="October 2023"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Type</Label>
+                <Label>Select Boarder <span className="text-destructive">*</span></Label>
                 <Select
-                  value={currentPayment.type}
-                  onValueChange={(val) => setCurrentPayment({ ...currentPayment, type: val as any })}
+                  value={currentPayment.boarderId}
+                  onValueChange={(val) => {
+                    const amt = currentPayment.type === "Monthly Rent" ? getDefaultAmountForBoarder(val) : currentPayment.amount;
+                    setCurrentPayment({ ...currentPayment, boarderId: val, amount: amt || currentPayment.amount });
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Choose a boarder..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Monthly Rent">Monthly Rent</SelectItem>
-                    <SelectItem value="Advance">Advance</SelectItem>
-                    <SelectItem value="Security Deposit">Security Deposit</SelectItem>
-                    <SelectItem value="Utility">Utility</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select
-                  value={currentPayment.status}
-                  onValueChange={(val) => setCurrentPayment({ ...currentPayment, status: val as any })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
+                    {boarders.filter(b => b.status === "Active").map((b) => {
+                      const room = rooms.find(r => r.id === b.roomId);
+                      return (
+                        <SelectItem key={b.id} value={b.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{b.fullName}</span>
+                            {room && <span className="text-[10px] text-muted-foreground">({room.name} · ₱{room.monthlyRate.toLocaleString()})</span>}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            {/* Auto-generated receipt number — read only */}
+
+            <div className="border-t border-border/30" />
+
+            {/* ── Section 2: Payment Details ── */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <Banknote className="h-3 w-3" /> Payment Details
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="pay-amount">Amount (₱) <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="pay-amount"
+                    type="number"
+                    min="0"
+                    value={currentPayment.amount || ""}
+                    onChange={(e) => setCurrentPayment({ ...currentPayment, amount: Number(e.target.value) })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pay-month">Billing Month <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="pay-month"
+                    value={currentPayment.month || ""}
+                    onChange={(e) => setCurrentPayment({ ...currentPayment, month: e.target.value })}
+                    placeholder="e.g., February 2026"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Payment Type</Label>
+                  <Select
+                    value={currentPayment.type}
+                    onValueChange={(val) => {
+                      const newState: Partial<Payment> = { ...currentPayment, type: val as any };
+                      // Auto-fill room rate for monthly rent
+                      if (val === "Monthly Rent" && currentPayment.boarderId) {
+                        newState.amount = getDefaultAmountForBoarder(currentPayment.boarderId);
+                      }
+                      setCurrentPayment(newState);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monthly Rent">Monthly Rent</SelectItem>
+                      <SelectItem value="Advance">Advance Payment</SelectItem>
+                      <SelectItem value="Security Deposit">Security Deposit</SelectItem>
+                      <SelectItem value="Deposit">Deposit</SelectItem>
+                      <SelectItem value="Utility">Utility Bill</SelectItem>
+                      <SelectItem value="Maintenance">Maintenance Fee</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Payment Status</Label>
+                  <Select
+                    value={currentPayment.status}
+                    onValueChange={(val) => setCurrentPayment({ ...currentPayment, status: val as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Paid">
+                        <span className="flex items-center gap-2">✅ Paid</span>
+                      </SelectItem>
+                      <SelectItem value="Pending">
+                        <span className="flex items-center gap-2">⏳ Pending</span>
+                      </SelectItem>
+                      <SelectItem value="Overdue">
+                        <span className="flex items-center gap-2">🔴 Overdue</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border/30" />
+
+            {/* ── Section 3: Method & Dates ── */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <CalendarDays className="h-3 w-3" /> Method & Dates
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Payment Method</Label>
+                  <Select
+                    value={currentPayment.method || "Cash"}
+                    onValueChange={(val) => setCurrentPayment({ ...currentPayment, method: val as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cash">💵 Cash</SelectItem>
+                      <SelectItem value="GCash">📱 GCash</SelectItem>
+                      <SelectItem value="Bank Transfer">🏦 Bank Transfer</SelectItem>
+                      <SelectItem value="Check">📑 Check</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Received By</Label>
+                  <Input
+                    value={currentPayment.receivedBy || ""}
+                    onChange={(e) => setCurrentPayment({ ...currentPayment, receivedBy: e.target.value })}
+                    placeholder="Administrator"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {currentPayment.status === "Paid" && (
+                  <div className="grid gap-2">
+                    <Label>Date Paid</Label>
+                    <Input
+                      type="date"
+                      value={currentPayment.paidDate || ""}
+                      onChange={(e) => setCurrentPayment({ ...currentPayment, paidDate: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div className="grid gap-2">
+                  <Label>Due Date</Label>
+                  <Input
+                    type="date"
+                    value={currentPayment.dueDate || ""}
+                    onChange={(e) => setCurrentPayment({ ...currentPayment, dueDate: e.target.value })}
+                  />
+                </div>
+                {currentPayment.status !== "Paid" && (
+                  <div className="grid gap-2">
+                    <Label>Billing Date</Label>
+                    <Input
+                      type="date"
+                      value={currentPayment.date || ""}
+                      onChange={(e) => setCurrentPayment({ ...currentPayment, date: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Late Fee (show when Overdue) ── */}
+            {(currentPayment.status === "Overdue" || (currentPayment.lateFee && currentPayment.lateFee > 0)) && (
+              <>
+                <div className="border-t border-border/30" />
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-destructive flex items-center gap-2">
+                    <AlertCircle className="h-3 w-3" /> Late Fee
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Late Fee Amount (₱)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={currentPayment.lateFee || ""}
+                        onChange={(e) => setCurrentPayment({ ...currentPayment, lateFee: Number(e.target.value) })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <p className="text-xs text-muted-foreground">
+                        Total: <span className="font-bold text-foreground">₱{((currentPayment.amount || 0) + (currentPayment.lateFee || 0)).toLocaleString()}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="border-t border-border/30" />
+
+            {/* ── Section 4: Notes ── */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                <FileText className="h-3 w-3" /> Additional Notes
+              </h4>
+              <Textarea
+                value={currentPayment.notes || ""}
+                onChange={(e) => setCurrentPayment({ ...currentPayment, notes: e.target.value })}
+                placeholder="Optional remarks, e.g., partial payment, adjustment reason..."
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="border-t border-border/30" />
+
+            {/* ── Receipt Number (read-only) ── */}
             <div className="grid gap-2">
               <Label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 <Hash className="h-3 w-3" /> Receipt Number
@@ -330,10 +543,48 @@ const PaymentsPage = () => {
               </div>
               <p className="text-[9px] text-muted-foreground">Auto-generated · cannot be edited</p>
             </div>
+
+            {/* ── Summary ── */}
+            {currentPayment.boarderId && currentPayment.amount ? (
+              <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-accent">Payment Summary</p>
+                <div className="grid grid-cols-2 gap-y-1.5 text-xs">
+                  <span className="text-muted-foreground">Boarder:</span>
+                  <span className="font-bold text-foreground text-right">{getBoarderName(currentPayment.boarderId)}</span>
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="font-semibold text-foreground text-right">{currentPayment.type}</span>
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-bold text-foreground text-right">₱{(currentPayment.amount || 0).toLocaleString()}</span>
+                  {(currentPayment.lateFee || 0) > 0 && (
+                    <>
+                      <span className="text-muted-foreground">Late Fee:</span>
+                      <span className="font-bold text-destructive text-right">+₱{(currentPayment.lateFee || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground font-bold">Total:</span>
+                      <span className="font-black text-accent text-right">₱{((currentPayment.amount || 0) + (currentPayment.lateFee || 0)).toLocaleString()}</span>
+                    </>
+                  )}
+                  <span className="text-muted-foreground">Period:</span>
+                  <span className="font-semibold text-foreground text-right">{currentPayment.month || "—"}</span>
+                  <span className="text-muted-foreground">Method:</span>
+                  <span className="font-semibold text-foreground text-right">{currentPayment.method || "Cash"}</span>
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className={`font-bold text-right ${currentPayment.status === "Paid" ? "text-success" : currentPayment.status === "Overdue" ? "text-destructive" : "text-warning"}`}>
+                    {currentPayment.status}
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="pt-2 gap-2">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{mode === "add" ? "Record Payment" : "Save Changes"}</Button>
+            <Button onClick={handleSubmit} className="gap-2">
+              {mode === "add" ? (
+                <><CreditCard className="h-3.5 w-3.5" /> Record Payment</>
+              ) : (
+                <><Edit className="h-3.5 w-3.5" /> Save Changes</>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
