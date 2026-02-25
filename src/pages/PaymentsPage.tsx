@@ -53,6 +53,10 @@ const PaymentsPage = () => {
       (p.receiptNumber || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    const dateA = new Date(a.paidDate || a.date || 0).getTime();
+    const dateB = new Date(b.paidDate || b.date || 0).getTime();
+    return dateB - dateA;
   });
 
   const statusStyle = (s: string) =>
