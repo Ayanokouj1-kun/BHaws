@@ -3,7 +3,10 @@ export interface Room {
   name: string;
   capacity: number;
   monthlyRate: number;
+  /** Computed automatically from beds — do not set manually */
   status: "Available" | "Full" | "Partial" | "Under Maintenance";
+  /** When true, room is locked as Under Maintenance regardless of bed occupancy */
+  underMaintenance?: boolean;
   beds: Bed[];
   floor?: number;
   amenities?: string[];

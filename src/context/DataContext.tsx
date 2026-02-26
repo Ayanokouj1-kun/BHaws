@@ -1,8 +1,21 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { Room, Boarder, Payment, AuditLog, BhSettings, MaintenanceRequest, Expense, Announcement, User } from "@/types";
+import { Room, Boarder, Payment, AuditLog, BhSettings, MaintenanceRequest, Expense, Announcement, User, Bed } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { generateReceiptNumber } from "@/utils/receiptGenerator";
+
+// ── Derives the display status from actual bed occupancy + maintenance flag ──
+export const computeRoomStatus = (
+    beds: Bed[],
+    underMaintenance: boolean
+): Room["status"] => {
+    if (underMaintenance) return "Under Maintenance";
+    if (!beds || beds.length === 0) return "Available";
+    const occupied = beds.filter(b => b.status === "Occupied").length;
+    if (occupied === 0) return "Available";
+    if (occupied === beds.length) return "Full";
+    return "Partial";
+};
 
 interface DataContextType {
     rooms: Room[];
@@ -109,11 +122,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     safe("announcements"),
                 ]);
 
-            if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => ({
-                ...r, monthlyRate: parseFloat(r.monthly_rate) || 0,
-                createdAt: r.created_at, updatedAt: r.updated_at,
-                beds: (r.beds || []).map((b: any) => ({ ...b, roomId: b.room_id, boarderId: b.boarder_id }))
-            })));
+            if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => {
+                const beds: Bed[] = (r.beds || []).map((b: any) => ({ ...b, roomId: b.room_id, boarderId: b.boarder_id }));
+                const underMaintenance = !!r.under_maintenance;
+                return {
+                    ...r,
+                    monthlyRate: parseFloat(r.monthly_rate) || 0,
+                    createdAt: r.created_at,
+                    updatedAt: r.updated_at,
+                    underMaintenance,
+                    beds,
+                    status: computeRoomStatus(beds, underMaintenance),
+                };
+            }));
 
             if (boardersRes) setBoarders(boardersRes.map((b: any) => ({
                 ...b,
@@ -232,9 +253,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- ROOMS ---
     const addRoom = async (room: Room) => {
+        const underMaintenance = !!room.underMaintenance;
         const { data: newRoom, error } = await supabase.from("rooms").insert([{
             name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
-            status: room.status, floor: room.floor, amenities: room.amenities, description: room.description
+            status: "Available", under_maintenance: underMaintenance,
+            floor: room.floor, amenities: room.amenities, description: room.description
         }]).select().single();
 
         if (error) { toast.error("Failed to add room: " + error.message); return; }
@@ -249,9 +272,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const updateRoom = async (room: Room) => {
+        const underMaintenance = !!room.underMaintenance;
         const { error } = await supabase.from("rooms").update({
             name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
-            status: room.status, floor: room.floor, amenities: room.amenities, description: room.description
+            under_maintenance: underMaintenance,
+            floor: room.floor, amenities: room.amenities, description: room.description
         }).eq("id", room.id);
 
         if (error) { toast.error("Failed to update room"); return; }

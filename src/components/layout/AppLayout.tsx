@@ -1,12 +1,13 @@
 import { ReactNode, useState, useRef, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { Bell, Search, LogOut, User, ChevronDown, CheckCheck } from "lucide-react";
+import { Bell, Search, LogOut, User, ChevronDown, CheckCheck, Palette, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useTheme, THEMES } from "@/context/ThemeContext";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,25 +16,28 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { payments, maintenance, announcements, settings, boarders, user, logout } = useData();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+
   const [readNotifs, setReadNotifs] = useState<string[]>(() => {
-    // Load persisted read notifications from localStorage
     try {
       const saved = localStorage.getItem("bhaws_read_notifications");
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
+
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<HTMLDivElement>(null);
 
   const boarderPhoto = user?.role === "Boarder"
     ? boarders.find(b => b.id === user.boarderId)?.profilePhoto
     : undefined;
 
-  // Build notification list from real data
+  // ── Notifications ────────────────────────────────────────────────────────
   const notifications = [
     ...payments
       .filter(p => p.status === "Overdue")
@@ -62,19 +66,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     urgent: "bg-orange-500/10 text-orange-600",
     announce: "bg-accent/10 text-accent",
   };
-
   const notifLabels: Record<string, string> = {
-    overdue: "Overdue",
-    pending: "Due",
-    urgent: "Urgent",
-    announce: "Notice",
+    overdue: "Overdue", pending: "Due", urgent: "Urgent", announce: "Notice",
   };
 
-  // Close dropdowns when clicking outside
+  // ── Close dropdowns on outside click ────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+      if (themeRef.current && !themeRef.current.contains(e.target as Node)) setThemeOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -83,10 +84,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   const markAllRead = () => {
     const allIds = notifications.map(n => n.id);
     setReadNotifs(allIds);
-    // Persist to localStorage
     localStorage.setItem("bhaws_read_notifications", JSON.stringify(allIds));
     toast.success("All notifications marked as read");
   };
+
+  // ── Current theme meta ───────────────────────────────────────────────────
+  const currentThemeMeta = THEMES.find(t => t.id === theme)!;
 
   return (
     <SidebarProvider>
@@ -94,7 +97,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
 
-          {/* ── Header ────────────────────────────────────────────────────── */}
+          {/* ── Header ───────────────────────────────────────────────────── */}
           <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-30">
 
             {/* Left: sidebar trigger + search */}
@@ -109,13 +112,96 @@ export function AppLayout({ children }: AppLayoutProps) {
               </div>
             </div>
 
-            {/* Right: notifications + profile */}
+            {/* Right: theme picker + notifications + profile */}
             <div className="flex items-center gap-1">
+
+              {/* ── Theme Switcher ────────────────────────────────────── */}
+              <div className="relative" ref={themeRef}>
+                <button
+                  onClick={() => { setThemeOpen(o => !o); setNotifOpen(false); setProfileOpen(false); }}
+                  className="relative p-2 rounded-lg hover:bg-muted transition-colors group"
+                  aria-label="Change theme"
+                  title="Change theme"
+                >
+                  {/* Live swatch circle */}
+                  <div
+                    className="h-5 w-5 rounded-full border-2 border-border shadow-sm transition-transform group-hover:scale-110"
+                    style={{ background: `linear-gradient(135deg, ${currentThemeMeta.swatches[0]} 50%, ${currentThemeMeta.swatches[1]} 50%)` }}
+                  />
+                </button>
+
+                {themeOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-card rounded-xl border border-border shadow-2xl z-50 overflow-hidden animate-fade-in">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
+                      <Palette className="h-4 w-4 text-accent" />
+                      <p className="text-sm font-bold text-foreground">Appearance</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider ml-auto">
+                        {currentThemeMeta.label}
+                      </p>
+                    </div>
+
+                    {/* Theme grid */}
+                    <div className="p-3 grid grid-cols-3 gap-2">
+                      {THEMES.map(t => {
+                        const isActive = theme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => { setTheme(t.id); setThemeOpen(false); toast.success(`Theme changed to ${t.label}`); }}
+                            className={`relative flex flex-col items-center gap-2 p-2.5 rounded-xl border-2 transition-all duration-150 hover:scale-[1.03] ${isActive
+                                ? "border-accent bg-accent/10 shadow-sm"
+                                : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40"
+                              }`}
+                          >
+                            {/* Swatch preview */}
+                            <div className="relative h-9 w-9 rounded-full overflow-hidden shadow-md border border-white/10">
+                              {/* bg + accent halves */}
+                              <div className="absolute inset-0" style={{ background: t.swatches[0] }} />
+                              <div
+                                className="absolute inset-0"
+                                style={{
+                                  background: `conic-gradient(${t.swatches[1]} 0deg 180deg, transparent 180deg)`,
+                                }}
+                              />
+                              {/* tiny foreground dot */}
+                              <div
+                                className="absolute inset-0 flex items-end justify-end p-1"
+                              >
+                                <span
+                                  className="h-2 w-2 rounded-full opacity-80"
+                                  style={{ background: t.swatches[2] }}
+                                />
+                              </div>
+                            </div>
+
+                            <span className="text-[11px] font-semibold text-foreground leading-none">{t.label}</span>
+                            <span className="text-[9px] text-muted-foreground leading-none">{t.description}</span>
+
+                            {/* Active checkmark */}
+                            {isActive && (
+                              <div className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-accent flex items-center justify-center">
+                                <Check className="h-2.5 w-2.5 text-accent-foreground" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="px-4 pb-3 pt-1">
+                      <p className="text-[10px] text-muted-foreground text-center">
+                        Theme preference is saved automatically
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* ── Notifications ──────────────────────────────────────── */}
               <div className="relative" ref={notifRef}>
                 <button
-                  onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
+                  onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); setThemeOpen(false); }}
                   className="relative p-2 rounded-lg hover:bg-muted transition-colors"
                   aria-label="Notifications"
                 >
@@ -168,9 +254,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                                 <p className="text-xs font-medium text-foreground leading-snug">{n.message}</p>
                                 {n.time && <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>}
                               </div>
-                              {!isRead && (
-                                <span className="mt-1.5 h-2 w-2 rounded-full bg-accent shrink-0" />
-                              )}
+                              {!isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-accent shrink-0" />}
                             </div>
                           );
                         })
@@ -191,7 +275,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {/* ── Profile ────────────────────────────────────────────── */}
               <div className="relative ml-1" ref={profileRef}>
                 <button
-                  onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
+                  onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); setThemeOpen(false); }}
                   className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
                   aria-label="Profile"
                 >
@@ -215,18 +299,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                       <p className="text-sm font-bold text-foreground">{user?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{user?.username}</p>
                       <Badge variant="outline" className={`mt-1.5 text-[9px] font-bold uppercase border-opacity-20 ${user?.role === "Admin" ? "text-accent border-accent bg-accent/5" :
-                        user?.role === "Staff" ? "text-success border-success bg-success/5" :
-                          "text-warning border-warning bg-warning/5"
+                          user?.role === "Staff" ? "text-success border-success bg-success/5" :
+                            "text-warning border-warning bg-warning/5"
                         }`}>
                         {user?.role}
                       </Badge>
                     </div>
                     <div className="py-1.5">
                       <button
-                        onClick={() => {
-                          navigate("/account");
-                          setProfileOpen(false);
-                        }}
+                        onClick={() => { navigate("/account"); setProfileOpen(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                       >
                         <User className="h-4 w-4 text-muted-foreground" /> My Account
@@ -234,11 +315,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="py-1.5 border-t border-border/60">
                       <button
-                        onClick={() => {
-                          logout();
-                          toast.info("Session ended. Goodbye!");
-                          navigate("/login");
-                        }}
+                        onClick={() => { logout(); toast.info("Session ended. Goodbye!"); navigate("/login"); }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-destructive hover:bg-destructive/5 transition-colors"
                       >
                         <LogOut className="h-4 w-4" /> Sign Out
@@ -247,13 +324,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                   </div>
                 )}
               </div>
+
             </div>
           </header>
 
-          {/* ── Page Content ──────────────────────────────────────────────── */}
+          {/* ── Page Content ───────────────────────────────────────────── */}
           <main className="flex-1 p-6 overflow-auto">
             {children}
           </main>
+
         </div>
       </div>
     </SidebarProvider>

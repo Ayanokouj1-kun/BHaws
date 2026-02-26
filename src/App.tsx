@@ -21,6 +21,7 @@ import AccountPage from "./pages/AccountPage";
 import NotFound from "./pages/NotFound";
 
 import { DataProvider } from "@/context/DataContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -33,41 +34,43 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <DataProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Login as landing page */}
-            <Route path="/" element={<LoginPage />} />
-            {/* Keep /login as an alias for backwards compatibility */}
-            <Route path="/login" element={<LoginPage />} />
-            {/* Boarder self-signup */}
-            <Route path="/signup" element={<BoarderSignupPage />} />
-            {/* Dashboard is now a protected route at /dashboard */}
-            <Route
-              path="/dashboard"
-              element={(
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              )}
-            />
-            <Route path="/rooms" element={<ProtectedRoute><RoomsPage /></ProtectedRoute>} />
-            <Route path="/rooms/:id" element={<ProtectedRoute><RoomDetails /></ProtectedRoute>} />
-            <Route path="/boarders" element={<ProtectedRoute><BoardersPage /></ProtectedRoute>} />
-            <Route path="/boarders/:id" element={<ProtectedRoute><BoarderDetails /></ProtectedRoute>} />
-            <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-            <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
-            <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-            <Route path="/audit-logs" element={<ProtectedRoute><AuditLogsPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Login as landing page */}
+              <Route path="/" element={<LoginPage />} />
+              {/* Keep /login as an alias for backwards compatibility */}
+              <Route path="/login" element={<LoginPage />} />
+              {/* Boarder self-signup */}
+              <Route path="/signup" element={<BoarderSignupPage />} />
+              {/* Dashboard is now a protected route at /dashboard */}
+              <Route
+                path="/dashboard"
+                element={(
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                )}
+              />
+              <Route path="/rooms" element={<ProtectedRoute><RoomsPage /></ProtectedRoute>} />
+              <Route path="/rooms/:id" element={<ProtectedRoute><RoomDetails /></ProtectedRoute>} />
+              <Route path="/boarders" element={<ProtectedRoute><BoardersPage /></ProtectedRoute>} />
+              <Route path="/boarders/:id" element={<ProtectedRoute><BoarderDetails /></ProtectedRoute>} />
+              <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+              <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogsPage /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </DataProvider>
   </QueryClientProvider>
 );

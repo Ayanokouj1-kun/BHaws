@@ -6,28 +6,47 @@ import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft,
     Home,
-    Users,
     Bed as BedIcon,
-    CreditCard,
-    Target,
     AlertCircle,
-    MoreVertical,
-    Info
+    Info,
+    WrenchIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { computeRoomStatus } from "@/context/DataContext";
+import { toast } from "sonner";
+
+const statusBadgeClass = (s: string) => {
+    switch (s) {
+        case "Available": return "bg-success text-white";
+        case "Full": return "bg-primary text-white";
+        case "Partial": return "bg-amber-500 text-white";
+        case "Under Maintenance": return "bg-orange-500 text-white";
+        default: return "bg-muted text-muted-foreground";
+    }
+};
 
 const RoomDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { rooms, boarders, payments, isLoading } = useData();
+    const { rooms, boarders, updateRoom, isLoading } = useData();
 
     const room = rooms.find((r) => r.id === id);
+    const liveStatus = room ? computeRoomStatus(room.beds, !!room.underMaintenance) : "Available";
     const occupiedCount = room?.beds.filter(b => b.status === "Occupied").length || 0;
     const occupancyRate = room ? Math.round((occupiedCount / room.capacity) * 100) : 0;
 
-    if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
-    if (!room) return <AppLayout><div>Room not found</div></AppLayout>;
+    const handleMaintenanceToggle = async (val: boolean) => {
+        if (!room) return;
+        const updated = { ...room, underMaintenance: val };
+        updated.status = computeRoomStatus(updated.beds, val);
+        await updateRoom(updated);
+        toast.success(val ? "Room set to Under Maintenance" : "Maintenance mode lifted");
+    };
+
+    if (isLoading) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div></AppLayout>;
+    if (!room) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Room not found</div></AppLayout>;
 
     return (
         <AppLayout>
@@ -38,30 +57,30 @@ const RoomDetails = () => {
                     </Button>
                     <div>
                         <h1 className="page-header">{room.name}</h1>
-                        <p className="page-subtitle">Detailed Room Status & Occupancy</p>
+                        <p className="page-subtitle">Detailed Room Status &amp; Occupancy</p>
                     </div>
-                    <div className="ml-auto flex gap-2">
-                        {/* Placeholder for future actions */}
+                    <div className="ml-auto">
+                        <Badge className={`${statusBadgeClass(liveStatus)} font-semibold`}>
+                            {liveStatus}
+                        </Badge>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* ── Sidebar info card ── */}
                     <Card className="lg:col-span-1 shadow-sm border-border/60">
                         <CardHeader className="bg-accent/5 pb-6">
                             <div className="flex justify-between items-start">
                                 <div className="p-3 bg-card rounded-2xl shadow-sm border border-border/40">
                                     <Home className="h-8 w-8 text-accent" />
                                 </div>
-                                <Badge className={
-                                    room.status === "Available" ? "bg-success" :
-                                        room.status === "Full" ? "bg-destructive" : "bg-warning"
-                                }>
-                                    {room.status}
+                                <Badge className={`${statusBadgeClass(liveStatus)} font-semibold`}>
+                                    {liveStatus}
                                 </Badge>
                             </div>
                             <div className="mt-4">
                                 <CardTitle className="text-2xl font-bold">{room.name}</CardTitle>
-                                <p className="text-sm text-muted-foreground mt-1">Monthly Rate: ₱{room.monthlyRate.toLocaleString()}/bed</p>
+                                <p className="text-sm text-muted-foreground mt-1">₱{room.monthlyRate.toLocaleString()}/bed · Floor {room.floor || 1}</p>
                             </div>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-6">
@@ -72,48 +91,74 @@ const RoomDetails = () => {
                                 </div>
                                 <Progress value={occupancyRate} className="h-2" />
                                 <p className="text-[10px] text-muted-foreground text-center">
-                                    {occupiedCount} out of {room.capacity} beds are currently occupied
+                                    {occupiedCount} of {room.capacity} beds occupied
                                 </p>
                             </div>
 
                             <div className="flex flex-col gap-3">
-                                <div className="p-4 rounded-xl bg-muted/30 border border-border/30 text-center flex flex-col justify-center">
-                                    <p className="text-xs text-muted-foreground uppercase mb-1">Potential</p>
+                                <div className="p-4 rounded-xl bg-muted/30 border border-border/30 text-center">
+                                    <p className="text-xs text-muted-foreground uppercase mb-1">Max Revenue</p>
                                     <p className="text-lg font-bold tracking-tight">₱{(room.monthlyRate * room.capacity).toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 rounded-xl bg-success/5 border border-success/10 text-center flex flex-col justify-center">
-                                    <p className="text-xs text-success uppercase mb-1">Current</p>
+                                <div className="p-4 rounded-xl bg-success/5 border border-success/10 text-center">
+                                    <p className="text-xs text-success uppercase mb-1">Current Revenue</p>
                                     <p className="text-lg font-bold text-success tracking-tight">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
                                 </div>
+                            </div>
+
+                            {/* Maintenance toggle */}
+                            <div className="flex items-center justify-between rounded-xl border border-orange-500/20 bg-orange-500/5 px-3 py-3 gap-3">
+                                <div className="flex items-center gap-2">
+                                    <WrenchIcon className="h-4 w-4 text-orange-500 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-semibold leading-tight">Maintenance Mode</p>
+                                        <p className="text-[10px] text-muted-foreground leading-tight">Locks room as unavailable</p>
+                                    </div>
+                                </div>
+                                <Switch
+                                    checked={!!room.underMaintenance}
+                                    onCheckedChange={handleMaintenanceToggle}
+                                />
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* ── Beds layout ── */}
                     <div className="lg:col-span-3 space-y-6">
                         <h3 className="text-lg font-bold flex items-center gap-2 px-2">
-                            <BedIcon className="h-5 w-5 text-accent" /> Bed Layout & Occupants
+                            <BedIcon className="h-5 w-5 text-accent" /> Bed Layout &amp; Occupants
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {room.beds.map((bed) => {
                                 const occupant = boarders.find((b) => b.id === bed.boarderId);
+                                const isOccupied = bed.status === "Occupied";
                                 return (
-                                    <Card key={bed.id} className={`shadow-sm transition-all hover:shadow-md border-border/60 ${bed.status === "Occupied" ? "bg-accent/5 border-accent/20" : "bg-card"}`}>
+                                    <Card
+                                        key={bed.id}
+                                        className={`shadow-sm transition-all hover:shadow-md border-border/60 ${isOccupied ? "bg-accent/5 border-accent/20" : "bg-card"}`}
+                                    >
                                         <CardContent className="p-5">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${bed.status === "Occupied" ? "bg-accent/10" : "bg-muted"}`}>
-                                                        <BedIcon className={`h-6 w-6 ${bed.status === "Occupied" ? "text-accent" : "text-muted-foreground"}`} />
+                                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${isOccupied ? "bg-accent/10" : "bg-muted"}`}>
+                                                        <BedIcon className={`h-6 w-6 ${isOccupied ? "text-accent" : "text-muted-foreground"}`} />
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-sm text-foreground">{bed.name}</p>
-                                                        <Badge variant="outline" className={`text-[10px] font-bold uppercase mt-0.5 ${bed.status === "Occupied" ? "text-accent border-accent/20 bg-accent/5" : "text-muted-foreground"}`}>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[10px] font-bold uppercase mt-0.5 ${isOccupied ? "text-accent border-accent/20 bg-accent/5" : "text-muted-foreground"}`}
+                                                        >
                                                             {bed.status}
                                                         </Badge>
                                                     </div>
                                                 </div>
-                                                {bed.status === "Occupied" && occupant ? (
-                                                    <Link to={`/boarders/${occupant.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                                {isOccupied && occupant ? (
+                                                    <Link
+                                                        to={`/boarders/${occupant.id}`}
+                                                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                                                    >
                                                         <div className="text-right">
                                                             <p className="text-sm font-bold text-foreground">{occupant.fullName}</p>
                                                             <p className="text-[10px] text-muted-foreground">Since {occupant.moveInDate}</p>
@@ -127,7 +172,12 @@ const RoomDetails = () => {
                                                         </div>
                                                     </Link>
                                                 ) : (
-                                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/boarders")}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-muted-foreground"
+                                                        onClick={() => navigate("/boarders")}
+                                                    >
                                                         Assign Boarder
                                                     </Button>
                                                 )}
@@ -141,7 +191,7 @@ const RoomDetails = () => {
                         <Card className="shadow-sm border-border/60 mt-8">
                             <CardHeader className="pb-3 border-b border-border/40">
                                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4" /> Room Compliance & Maintenance
+                                    <AlertCircle className="h-4 w-4" /> Room Compliance &amp; Maintenance
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6">
@@ -158,7 +208,9 @@ const RoomDetails = () => {
                                 <div className="flex items-start gap-3 mt-6 pt-6 border-t border-border/40">
                                     <Info className="h-4 w-4 text-accent mt-0.5" />
                                     <p className="text-xs text-muted-foreground leading-relaxed">
-                                        Room status is automatically managed based on bed availability. Changes to room capacity will regenerate bed identifiers.
+                                        Room status is <strong>automatically computed</strong> from bed occupancy.
+                                        Toggle <em>Maintenance Mode</em> above to override it — this marks the room
+                                        as unavailable regardless of bed records.
                                     </p>
                                 </div>
                             </CardContent>
