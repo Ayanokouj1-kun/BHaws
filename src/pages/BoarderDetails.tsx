@@ -22,9 +22,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 const BoarderDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { boarders, rooms, payments, isLoading } = useData();
+    const { boarders, rooms, payments, isLoading, user } = useData();
+    const role = user?.role || "Boarder";
 
     const boarder = boarders.find((b) => b.id === id);
+
+    // Security check: Boarders can only see their own profile
+    if (role === "Boarder" && user?.boarderId !== id) {
+        return <AppLayout><div className="flex items-center justify-center h-64 text-destructive font-bold">Unauthorized Access</div></AppLayout>;
+    }
+
     const boarderPayments = payments.filter((p) => p.boarderId === id);
     const room = rooms.find((r) => r.id === boarder?.assignedRoomId);
     const bed = room?.beds.find((b) => b.id === boarder?.assignedBedId);

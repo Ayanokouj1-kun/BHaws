@@ -40,7 +40,7 @@ export function AppSidebar() {
   ].filter(item => !item.roles || item.roles.includes(role));
 
   const systemItems = [
-    { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["Admin"] },
+    { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["Admin", "Staff"] },
     { title: "Audit Logs", url: "/audit-logs", icon: ClipboardList, roles: ["Admin"] },
     { title: "Settings", url: "/settings", icon: Settings, roles: ["Admin"] },
   ].filter(item => !item.roles || item.roles.includes(role));
@@ -66,12 +66,12 @@ export function AppSidebar() {
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/dashboard"}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all"
-                        activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
-                      >
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/dashboard"}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
+                    >
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>

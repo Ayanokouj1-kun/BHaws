@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 export type Theme = "light" | "dark" | "ocean" | "forest" | "sunset" | "midnight";
 
@@ -77,11 +78,46 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const root = document.documentElement;
-        // Remove all theme classes
+
+        // Remove all theme classes first
         THEMES.forEach(t => root.classList.remove(t.id));
-        // Apply new theme class (light uses no extra class — just remove dark/others)
-        if (theme !== "light") root.classList.add(theme);
+
+        // Use window.location for robust path detection at the root level
+        const path = window.location.pathname;
+        const isPublicPage = path === "/" || path === "/login" || path === "/signup";
+
+        // Apply new theme class only if not on a public page and theme isn't light
+        if (!isPublicPage && theme !== "light") {
+            root.classList.add(theme);
+        }
+
         localStorage.setItem(STORAGE_KEY, theme);
+    }, [theme]); // We can rely on popstate or other events if needed, but for theme toggle this is usually enough. 
+    // Actually, to handle navigation between login and app, we might want to check on interval or wrap in a small component.
+    // But react-router-dom Link clicks don't trigger global re-renders of parents unless we use the hook.
+    // Let's use a small interval or a navigation listener if we want it to be perfectly reactive without the hook.
+
+    // Safety: we define a listener for navigation changes to ensure theme updates when URL changes
+    useEffect(() => {
+        const handleLocationChange = () => {
+            const root = document.documentElement;
+            const path = window.location.pathname;
+            const isPublicPage = path === "/" || path === "/login" || path === "/signup";
+
+            THEMES.forEach(t => root.classList.remove(t.id));
+            if (!isPublicPage && theme !== "light") {
+                root.classList.add(theme);
+            }
+        };
+
+        window.addEventListener('popstate', handleLocationChange);
+        // Also listen for clicks on the document to catch client-side routing
+        window.addEventListener('click', handleLocationChange);
+
+        return () => {
+            window.removeEventListener('popstate', handleLocationChange);
+            window.removeEventListener('click', handleLocationChange);
+        };
     }, [theme]);
 
     const setTheme = (t: Theme) => setThemeState(t);

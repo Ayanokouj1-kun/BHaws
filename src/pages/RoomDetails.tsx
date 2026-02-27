@@ -9,11 +9,9 @@ import {
     Bed as BedIcon,
     AlertCircle,
     Info,
-    WrenchIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { computeRoomStatus } from "@/context/DataContext";
 import { toast } from "sonner";
 
@@ -30,20 +28,12 @@ const statusBadgeClass = (s: string) => {
 const RoomDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { rooms, boarders, updateRoom, isLoading } = useData();
+    const { rooms, boarders, isLoading } = useData();
 
     const room = rooms.find((r) => r.id === id);
     const liveStatus = room ? computeRoomStatus(room.beds, !!room.underMaintenance) : "Available";
     const occupiedCount = room?.beds.filter(b => b.status === "Occupied").length || 0;
     const occupancyRate = room ? Math.round((occupiedCount / room.capacity) * 100) : 0;
-
-    const handleMaintenanceToggle = async (val: boolean) => {
-        if (!room) return;
-        const updated = { ...room, underMaintenance: val };
-        updated.status = computeRoomStatus(updated.beds, val);
-        await updateRoom(updated);
-        toast.success(val ? "Room set to Under Maintenance" : "Maintenance mode lifted");
-    };
 
     if (isLoading) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div></AppLayout>;
     if (!room) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Room not found</div></AppLayout>;
@@ -51,18 +41,34 @@ const RoomDetails = () => {
     return (
         <AppLayout>
             <div className="animate-fade-in space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate("/rooms")}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="page-header">{room.name}</h1>
-                        <p className="page-subtitle">Detailed Room Status &amp; Occupancy</p>
+                {room.underMaintenance && (
+                    <div className="animate-in slide-in-from-top-4 fade-in duration-500 bg-orange-500/10 border-l-4 border-orange-500 p-4 rounded-r-xl flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                            <AlertCircle className="h-5 w-5 text-orange-500 animate-pulse" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-orange-600 dark:text-orange-400">Maintenance Active</h4>
+                            <p className="text-xs text-orange-600/80 dark:text-orange-400/80 font-medium">This room is currently LOCKED. Go to the Rooms list to lift maintenance mode.</p>
+                        </div>
                     </div>
-                    <div className="ml-auto">
-                        <Badge className={`${statusBadgeClass(liveStatus)} font-semibold`}>
-                            {liveStatus}
-                        </Badge>
+                )}
+
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <Button variant="ghost" size="icon" onClick={() => navigate("/rooms")} className="shrink-0">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div className="min-w-0 flex-1">
+                                <h1 className="page-header truncate text-2xl sm:text-3xl" title={room.name}>{room.name}</h1>
+                                <p className="page-subtitle truncate">Detailed Room Status &amp; Occupancy</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
+                            <Badge className={`${statusBadgeClass(liveStatus)} font-bold text-xs px-4 py-1 rounded-full shadow-sm`}>
+                                {liveStatus}
+                            </Badge>
+                        </div>
                     </div>
                 </div>
 
@@ -70,17 +76,19 @@ const RoomDetails = () => {
                     {/* ── Sidebar info card ── */}
                     <Card className="lg:col-span-1 shadow-sm border-border/60">
                         <CardHeader className="bg-accent/5 pb-6">
-                            <div className="flex justify-between items-start">
-                                <div className="p-3 bg-card rounded-2xl shadow-sm border border-border/40">
-                                    <Home className="h-8 w-8 text-accent" />
+                            <div className="flex items-center justify-between gap-4 min-w-0">
+                                <div className="p-2.5 bg-card rounded-2xl shadow-sm border border-border/40 shrink-0">
+                                    <Home className="h-6 w-6 text-accent" />
                                 </div>
-                                <Badge className={`${statusBadgeClass(liveStatus)} font-semibold`}>
+                                <Badge className={`${statusBadgeClass(liveStatus)} border-none text-[10px] font-black uppercase tracking-wider h-6 px-3 shadow-none shrink-0`}>
                                     {liveStatus}
                                 </Badge>
                             </div>
-                            <div className="mt-4">
-                                <CardTitle className="text-2xl font-bold">{room.name}</CardTitle>
-                                <p className="text-sm text-muted-foreground mt-1">₱{room.monthlyRate.toLocaleString()}/bed · Floor {room.floor || 1}</p>
+                            <div className="mt-5 min-w-0">
+                                <CardTitle className="text-2xl font-black tracking-tight truncate" title={room.name}>{room.name}</CardTitle>
+                                <p className="text-xs font-bold text-muted-foreground mt-1.5 uppercase tracking-widest opacity-60">
+                                    ₱{room.monthlyRate.toLocaleString()}/bed · Floor {room.floor || 1}
+                                </p>
                             </div>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-6">
@@ -104,21 +112,6 @@ const RoomDetails = () => {
                                     <p className="text-xs text-success uppercase mb-1">Current Revenue</p>
                                     <p className="text-lg font-bold text-success tracking-tight">₱{(room.monthlyRate * occupiedCount).toLocaleString()}</p>
                                 </div>
-                            </div>
-
-                            {/* Maintenance toggle */}
-                            <div className="flex items-center justify-between rounded-xl border border-orange-500/20 bg-orange-500/5 px-3 py-3 gap-3">
-                                <div className="flex items-center gap-2">
-                                    <WrenchIcon className="h-4 w-4 text-orange-500 shrink-0" />
-                                    <div>
-                                        <p className="text-xs font-semibold leading-tight">Maintenance Mode</p>
-                                        <p className="text-[10px] text-muted-foreground leading-tight">Locks room as unavailable</p>
-                                    </div>
-                                </div>
-                                <Switch
-                                    checked={!!room.underMaintenance}
-                                    onCheckedChange={handleMaintenanceToggle}
-                                />
                             </div>
                         </CardContent>
                     </Card>

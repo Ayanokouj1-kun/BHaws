@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Search, Plus, Trash2, Edit, Eye, Filter, Building,
-  MapPin, CheckCircle2, Users, Wrench, BedDouble, WrenchIcon
+  MapPin, CheckCircle2, Users, Wrench, BedDouble, WrenchIcon, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
@@ -47,7 +47,8 @@ const getBedBarColor = (status: Room["status"]) => {
 };
 
 const RoomsPage = () => {
-  const { rooms, addRoom, updateRoom, deleteRoom, isLoading } = useData();
+  const { rooms, addRoom, updateRoom, deleteRoom, isLoading, user } = useData();
+  const isAdmin = user?.role === "Admin";
   const [search, setSearch] = useState("");
   const [floorFilter, setFloorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -145,7 +146,7 @@ const RoomsPage = () => {
         room.beds = currentBeds.slice(0, room.capacity);
       }
 
-      // Auto-compute before persisting
+      // Allow Maintenance regardless of occupancy - user wants to "just lock it"
       room.status = computeRoomStatus(room.beds, !!room.underMaintenance);
       updateRoom(room);
       toast.success("Room updated successfully");
@@ -180,9 +181,11 @@ const RoomsPage = () => {
             <h1 className="page-header">Rooms</h1>
             <p className="page-subtitle">Manage room inventory and floor assignments</p>
           </div>
-          <Button className="gap-2 shadow-sm" onClick={handleOpenAdd}>
-            <Plus className="h-4 w-4" /> Add Room
-          </Button>
+          {isAdmin && (
+            <Button className="gap-2 shadow-sm" onClick={handleOpenAdd}>
+              <Plus className="h-4 w-4" /> Add Room
+            </Button>
+          )}
         </div>
 
         {/* ── Search + Floor filter row ── */}
@@ -251,7 +254,7 @@ const RoomsPage = () => {
             <p className="text-sm">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             {filtered.map((room) => {
               const occupied = room.beds.filter(b => b.status === "Occupied").length;
               const info = statusInfo(room.status);
@@ -263,33 +266,36 @@ const RoomsPage = () => {
                   className="group rounded-2xl p-5 border border-border/50 bg-card shadow-sm hover:bg-muted/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
                 >
                   <div>
-                    <div className="relative mb-4">
-                      {/* Status badge */}
-                      <div className="absolute -top-1 -right-1 z-10">
-                        <Badge
-                          variant="outline"
-                          className={`flex items-center gap-1 text-[9px] h-5 px-1.5 shrink-0 font-bold uppercase shadow-sm ${info.color}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${info.dot}`} />
-                          {room.status === "Under Maintenance" ? "Maintenance" : room.status}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-2.5 pr-20 min-w-0">
-                        <div className={`p-2 rounded-lg shrink-0 ${room.status === "Full" ? "bg-primary/10" : room.status === "Under Maintenance" ? "bg-orange-500/10" : "bg-success/10"}`}>
-                          <Building className={`h-4 w-4 ${room.status === "Full" ? "text-primary" : room.status === "Under Maintenance" ? "text-orange-500" : "text-success"}`} />
+                    <div className="flex items-start justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`p-2.5 rounded-xl shrink-0 ${room.status === "Full" ? "bg-primary/10" : room.status === "Under Maintenance" ? "bg-orange-500/10" : "bg-success/10"}`}>
+                          <Building className={`h-5 w-5 ${room.status === "Full" ? "text-primary" : room.status === "Under Maintenance" ? "text-orange-500 animate-pulse" : "text-success"}`} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <Link
-                            to={`/rooms/${room.id}`}
-                            className="font-bold text-sm text-foreground hover:text-accent transition-colors block leading-tight truncate"
-                          >
-                            {room.name}
-                          </Link>
-                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1 mt-1 truncate">
+                          <div className="marquee-container overflow-hidden">
+                            <Link
+                              to={`/rooms/${room.id}`}
+                              className="font-bold text-base text-foreground hover:text-accent transition-colors block leading-tight marquee-scroll"
+                              title={room.name}
+                            >
+                              {room.name}
+                            </Link>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest flex items-center gap-1 mt-1.5 opacity-60">
                             <MapPin className="h-3 w-3 shrink-0" /> Floor {room.floor || 1}
                           </p>
                         </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={`flex items-center gap-1.5 text-[10px] h-6 px-2 shrink-0 font-bold uppercase shadow-sm border-none ${info.color}`}
+                        >
+                          {room.underMaintenance ? <Lock className="h-3 w-3" /> : <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${info.dot}`} />}
+                          {room.underMaintenance ? "Unavailable" : room.status}
+                        </Badge>
+                        <p className="font-extrabold text-sm text-foreground tracking-tight">₱{room.monthlyRate.toLocaleString()}</p>
                       </div>
                     </div>
 
@@ -349,14 +355,16 @@ const RoomsPage = () => {
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors"
-                        onClick={() => handleDeleteRoom(room.id, room.name)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors"
+                          onClick={() => handleDeleteRoom(room.id, room.name)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -429,7 +437,9 @@ const RoomsPage = () => {
               </div>
               <Switch
                 checked={!!currentRoom.underMaintenance}
-                onCheckedChange={(v) => setCurrentRoom({ ...currentRoom, underMaintenance: v })}
+                onCheckedChange={(v) => {
+                  setCurrentRoom({ ...currentRoom, underMaintenance: v });
+                }}
               />
             </div>
 

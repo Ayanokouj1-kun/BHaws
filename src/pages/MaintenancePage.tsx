@@ -190,7 +190,9 @@ const MaintenancePage = () => {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-sm">{getRoomName(req.roomId)}</TableCell>
+                                    <TableCell className="text-sm font-bold text-foreground whitespace-nowrap">
+                                        {getRoomName(req.roomId)}
+                                    </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${priorityColors[req.priority]}`}>
                                             {req.priority}

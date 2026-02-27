@@ -14,7 +14,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const BoardersPage = () => {
-  const { boarders, rooms, addBoarder, updateBoarder, deleteBoarder, isLoading } = useData();
+  const { boarders, rooms, addBoarder, updateBoarder, deleteBoarder, isLoading, user } = useData();
+  const isAdmin = user?.role === "Admin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -219,14 +220,21 @@ const BoardersPage = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <Home className="h-3 w-3 text-muted-foreground" /> {getRoomName(b.assignedRoomId)}
+                  <TableCell className="max-w-[200px]">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="marquee-container overflow-hidden">
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-foreground marquee-scroll" title={getRoomName(b.assignedRoomId)}>
+                          <Home className="h-3.5 w-3.5 text-accent shrink-0" /> {getRoomName(b.assignedRoomId)}
+                        </div>
                       </div>
-                      <Badge variant="outline" className="w-fit text-[9px] font-bold px-1.5 py-0 bg-muted/30">
-                        {rooms.find(r => r.id === b.assignedRoomId)?.beds.find(bed => bed.id === b.assignedBedId)?.name || "Bed ?"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] font-bold px-1.5 py-0 bg-muted/30">
+                          {rooms.find(r => r.id === b.assignedRoomId)?.beds.find(bed => bed.id === b.assignedBedId)?.name || "Bed ?"}
+                        </Badge>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter opacity-70">
+                          Floor {rooms.find(r => r.id === b.assignedRoomId)?.floor || 1}
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -268,14 +276,16 @@ const BoardersPage = () => {
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors"
-                        onClick={() => handleDelete(b.id, b.fullName)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors"
+                          onClick={() => handleDelete(b.id, b.fullName)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -373,7 +383,7 @@ const BoardersPage = () => {
                     >
                       <SelectTrigger className="bg-card h-8 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
                       <SelectContent side="bottom" className="max-h-[250px]">
-                        {rooms.map((r) => (
+                        {rooms.filter(r => !r.underMaintenance).map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.name} ({r.beds.filter(bed => bed.status === "Available").length} av.)</SelectItem>
                         ))}
                       </SelectContent>

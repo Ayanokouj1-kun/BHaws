@@ -34,7 +34,8 @@ const Dashboard = () => {
     const occupiedBeds = allBeds.filter(b => b.status === "Occupied").length;
     const totalBeds = allBeds.length;
     const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-    const availableRooms = rooms.filter(r => r.status === "Available").length;
+    const availableRooms = rooms.filter(r => r.status === "Available" && !r.underMaintenance).length;
+    const lockedRooms = rooms.filter(r => r.underMaintenance).length;
 
     const paidPayments = payments.filter(p => p.status === "Paid");
     const overduePayments = payments.filter(p => p.status === "Overdue");
@@ -49,7 +50,7 @@ const Dashboard = () => {
 
     return {
       activeBoarders, totalBoarders: boarders.length,
-      occupiedBeds, totalBeds, occupancyPct, availableRooms,
+      occupiedBeds, totalBeds, occupancyPct, availableRooms, lockedRooms,
       totalIncome, totalExpenses, netFlow,
       overdueCount: overduePayments.length,
       overdueTotal: overduePayments.reduce((s, p) => s + p.amount, 0),
@@ -174,7 +175,10 @@ const Dashboard = () => {
                 <div className="p-2.5 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
                   <Building2 className="h-5 w-5 text-success" />
                 </div>
-                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{stats.availableRooms} free</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.availableRooms} Available</span>
+                  {stats.lockedRooms > 0 && <span className="text-[10px] font-bold text-orange-600 bg-orange-600/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.lockedRooms} Locked</span>}
+                </div>
               </div>
               <p className="text-2xl font-bold text-foreground">{stats.occupancyPct}%</p>
               <p className="text-xs font-semibold text-muted-foreground mt-0.5">Occupancy Rate</p>
@@ -354,7 +358,7 @@ const Dashboard = () => {
                     <p className="text-xs font-semibold text-foreground leading-snug">{log.action}
                       <span className="font-normal text-muted-foreground"> · {log.entity}</span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground truncate">{log.details}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">{log.details}</p>
                   </div>
                   <span className="text-[9px] text-muted-foreground/50 shrink-0 mt-0.5">{log.timestamp.slice(0, 10)}</span>
                 </div>

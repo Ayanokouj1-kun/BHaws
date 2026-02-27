@@ -137,20 +137,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }));
 
             if (boardersRes) setBoarders(boardersRes.map((b: any) => ({
-                ...b,
-                fullName: b.full_name,
-                contactNumber: b.contact_number,
-                emergencyContact: b.emergency_contact,
+                id: b.id,
+                fullName: b.full_name || "",
+                contactNumber: b.contact_number || "",
+                email: b.email || "",
+                address: b.address || "",
+                emergencyContact: b.emergency_contact || "",
                 assignedRoomId: b.assigned_room_id,
                 assignedBedId: b.assigned_bed_id,
-                moveInDate: b.move_in_date,
+                moveInDate: b.move_in_date || "",
                 moveOutDate: b.move_out_date,
                 advanceAmount: parseFloat(b.advance_amount) || 0,
                 depositAmount: parseFloat(b.deposit_amount) || 0,
+                status: b.status || "Active",
                 profilePhoto: b.profile_photo,
                 occupation: b.occupation,
                 gender: b.gender,
-                createdAt: b.created_at,
+                createdAt: b.created_at || "",
             })));
 
             if (paymentsRes) setPayments(paymentsRes.map((p: any) => ({
@@ -165,8 +168,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (settingsRes?.data) {
                 const s = settingsRes.data;
                 setSettings({
-                    ...s, ownerName: s.owner_name, lateFeeEnabled: s.late_fee_enabled,
-                    lateFeeAmount: parseFloat(s.late_fee_amount) || 0, gracePeriodDays: s.grace_period_days || 0
+                    ...s,
+                    ownerName: s.owner_name,
+                    taxId: s.tax_id,
+                    website: s.website,
+                    lateFeeEnabled: s.late_fee_enabled,
+                    lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
+                    gracePeriodDays: s.grace_period_days || 0
                 });
             }
 
@@ -254,9 +262,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- ROOMS ---
     const addRoom = async (room: Room) => {
         const underMaintenance = !!room.underMaintenance;
+        const initialStatus = underMaintenance ? "Under Maintenance" : "Available";
+
         const { data: newRoom, error } = await supabase.from("rooms").insert([{
             name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
-            status: "Available", under_maintenance: underMaintenance,
+            status: initialStatus, under_maintenance: underMaintenance,
             floor: room.floor, amenities: room.amenities, description: room.description
         }]).select().single();
 
@@ -273,8 +283,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const updateRoom = async (room: Room) => {
         const underMaintenance = !!room.underMaintenance;
+        const newStatus = computeRoomStatus(room.beds || [], underMaintenance);
+
         const { error } = await supabase.from("rooms").update({
             name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
+            status: newStatus,
             under_maintenance: underMaintenance,
             floor: room.floor, amenities: room.amenities, description: room.description
         }).eq("id", room.id);
@@ -327,7 +340,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             await supabase.from("beds").update({ boarder_id: nb.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
         }
         toast.success("Boarder added");
-        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${room?.name || 'a room'}.`);
+        const assignedRoom = rooms.find(r => r.id === boarder.assignedRoomId);
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}.`);
         refreshData();
     };
 
@@ -499,17 +513,32 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- SETTINGS ---
     const updateSettings = async (newSettings: BhSettings) => {
-        const { error } = await supabase.from("settings").update({
-            name: newSettings.name, address: newSettings.address, contact: newSettings.contact,
-            email: newSettings.email, website: (newSettings as any).website, owner_name: newSettings.ownerName,
-            currency: newSettings.currency, late_fee_enabled: newSettings.lateFeeEnabled,
-            late_fee_amount: newSettings.lateFeeAmount, grace_period_days: newSettings.gracePeriodDays
-        }).eq("id", 1);
-        if (error) toast.error("Failed to save settings");
-        else {
-            toast.success("Settings saved");
+        try {
+            setIsLoading(true);
+            const { error } = await supabase.from("settings").update({
+                name: newSettings.name,
+                address: newSettings.address,
+                contact: newSettings.contact,
+                email: newSettings.email,
+                website: newSettings.website,
+                owner_name: newSettings.ownerName,
+                tax_id: newSettings.taxId,
+                currency: newSettings.currency,
+                late_fee_enabled: newSettings.lateFeeEnabled,
+                late_fee_amount: newSettings.lateFeeAmount,
+                grace_period_days: newSettings.gracePeriodDays
+            }).eq("id", 1);
+
+            if (error) throw error;
+
+            toast.success("Settings saved successfully");
             addLog("Settings Updated", "Settings", "1", "System global settings were updated.");
-            refreshData();
+            await refreshData();
+        } catch (error: any) {
+            console.error("Error updating settings:", error);
+            toast.error(error.message || "Failed to save settings");
+        } finally {
+            setIsLoading(false);
         }
     };
 

@@ -14,14 +14,17 @@ import { toast } from "sonner";
 import { generateReceipt } from "@/utils/pdfGenerator";
 import { generateReceiptNumber } from "@/utils/receiptGenerator";
 import { Textarea } from "@/components/ui/textarea";
+import { ThermalReceipt } from "@/components/receipt/ThermalReceipt";
 
 const PaymentsPage = () => {
-  const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings, rooms } = useData();
+  const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings, rooms, user } = useData();
+  const isAdmin = user?.role === "Admin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [viewPayment, setViewPayment] = useState<Payment | null>(null);
+  const [selectedPaymentForThermal, setSelectedPaymentForThermal] = useState<Payment | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -80,11 +83,19 @@ const PaymentsPage = () => {
       receivedBy: p.receivedBy || "Administrator",
       houseName: settings.name,
       houseAddress: settings.address,
+      lateFee: p.lateFee,
+      paymentMethod: p.method,
+      notes: p.notes,
     });
     toast.success("Receipt generated successfully");
   };
 
+  const role = user?.role || "Boarder";
+
   const filtered = payments.filter(p => {
+    // Security: Boarders only see their own payments
+    if (role === "Boarder" && p.boarderId !== user?.boarderId) return false;
+
     const boarderName = boarders.find(b => b.id === p.boarderId)?.fullName || "";
     const matchesSearch = boarderName.toLowerCase().includes(search.toLowerCase()) ||
       (p.receiptNumber || "").toLowerCase().includes(search.toLowerCase());
@@ -189,9 +200,11 @@ const PaymentsPage = () => {
             <h1 className="page-header">Payments</h1>
             <p className="page-subtitle">Track rent and other utilities payments</p>
           </div>
-          <Button className="gap-2" onClick={handleOpenAdd}>
-            <Plus className="h-4 w-4" /> Record Payment
-          </Button>
+          {role !== "Boarder" && (
+            <Button className="gap-2" onClick={handleOpenAdd}>
+              <Plus className="h-4 w-4" /> Record Payment
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -328,24 +341,26 @@ const PaymentsPage = () => {
                       )}
 
                       {p.status === "Paid" && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/5" onClick={() => handlePrint(p)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/5" onClick={() => setSelectedPaymentForThermal(p)} title="Generate Thermal Receipt">
                           <Printer className="h-3.5 w-3.5" />
                         </Button>
                       )}
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/5"
-                        onClick={() => {
-                          if (confirm("Delete this payment record?")) {
-                            deletePayment(p.id);
-                            toast.success("Payment record deleted");
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/5"
+                          onClick={() => {
+                            if (confirm("Delete this payment record?")) {
+                              deletePayment(p.id);
+                              toast.success("Payment record deleted");
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -743,13 +758,12 @@ const PaymentsPage = () => {
 
                       <span className="text-muted-foreground">Status</span>
                       <span
-                        className={`text-right font-semibold ${
-                          currentPayment.status === "Paid"
-                            ? "text-success"
-                            : currentPayment.status === "Overdue"
+                        className={`text-right font-semibold ${currentPayment.status === "Paid"
+                          ? "text-success"
+                          : currentPayment.status === "Overdue"
                             ? "text-destructive"
                             : "text-warning"
-                        }`}
+                          }`}
                       >
                         {currentPayment.status}
                       </span>
@@ -815,13 +829,12 @@ const PaymentsPage = () => {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase text-muted-foreground tracking-widest">Status</p>
-                  <p className={`font-semibold ${
-                    viewPayment.status === "Paid"
-                      ? "text-success"
-                      : viewPayment.status === "Overdue"
+                  <p className={`font-semibold ${viewPayment.status === "Paid"
+                    ? "text-success"
+                    : viewPayment.status === "Overdue"
                       ? "text-destructive"
                       : "text-warning"
-                  }`}>
+                    }`}>
                     {viewPayment.status}
                   </p>
                 </div>
@@ -900,6 +913,17 @@ const PaymentsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedPaymentForThermal && (
+        <ThermalReceipt
+          isOpen={!!selectedPaymentForThermal}
+          onClose={() => setSelectedPaymentForThermal(null)}
+          payment={selectedPaymentForThermal}
+          boarder={boarders.find(b => b.id === selectedPaymentForThermal.boarderId)!}
+          room={rooms.find(r => r.id === boarders.find(b => b.id === selectedPaymentForThermal.boarderId)?.assignedRoomId) || { name: "N/A" } as any}
+          settings={settings}
+        />
+      )}
     </AppLayout>
   );
 };

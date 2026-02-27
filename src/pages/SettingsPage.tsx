@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,25 @@ const SettingsPage = () => {
   const [editInfo, setEditInfo] = useState<BhSettings>(settings);
   const [annDialog, setAnnDialog] = useState(false);
   const [newAnn, setNewAnn] = useState({ title: "", message: "", priority: "Normal" as Announcement["priority"] });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync editInfo when data is finally loaded from cloud
+  useEffect(() => {
+    if (settings) {
+      setEditInfo(settings);
+    }
+  }, [settings]);
+
+  const handleSaveSettings = async () => {
+    try {
+      setIsSaving(true);
+      await updateSettings(editInfo);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,9 +93,25 @@ const SettingsPage = () => {
   return (
     <AppLayout>
       <div className="animate-fade-in space-y-6 max-w-3xl">
-        <div>
-          <h1 className="page-header">Settings</h1>
-          <p className="page-subtitle">Manage your boarding house configuration and preferences</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="page-header">Settings</h1>
+            <p className="page-subtitle">Manage your boarding house configuration and preferences</p>
+          </div>
+          <Button
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="gap-2 shadow-sm"
+          >
+            {isSaving ? (
+              <span className="flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              <><Save className="h-4 w-4" /> Save Changes</>
+            )}
+          </Button>
         </div>
 
         {/* Boarding House Information */}
@@ -259,6 +294,17 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
+        {/* Floating Save Button for Mobile/Long scrolls */}
+        <div className="flex justify-end pt-4 pb-10">
+          <Button
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            size="lg"
+            className="gap-2 px-8 shadow-lg"
+          >
+            {isSaving ? "Saving Changes..." : "Save All Settings"}
+          </Button>
+        </div>
       </div>
 
       {/* Announcement Dialog */}

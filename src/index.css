@@ -338,4 +338,37 @@
       transform: translateY(0);
     }
   }
+
+  /* Marquee for long text */
+  .marquee-container {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+
+  .marquee-scroll {
+    display: inline-block;
+    white-space: nowrap;
+    transition: transform 0s linear;
+  }
+
+  .group:hover .marquee-scroll {
+    animation: marquee-text 8s linear infinite;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  @keyframes marquee-text {
+    0% {
+      transform: translateX(0);
+    }
+
+    33% {
+      transform: translateX(0);
+    }
+
+    /* Pause at start */
+    100% {
+      transform: translateX(-100%);
+    }
+  }
 }

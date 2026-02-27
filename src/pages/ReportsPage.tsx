@@ -15,19 +15,31 @@ import { generateCSV } from "@/utils/csvGenerator";
 type ReportType = "summary" | "income" | "unpaid" | "occupancy" | "history";
 
 const ReportsPage = () => {
-  const { rooms, boarders, payments, isLoading, settings } = useData();
+  const { rooms, boarders, payments, isLoading, settings, user } = useData();
   const [active, setActive] = useState<ReportType>("summary");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPerPage, setHistoryPerPage] = useState(25);
   const [historySearch, setHistorySearch] = useState("");
 
-  const tabs: { key: ReportType; label: string; icon: React.ElementType }[] = [
-    { key: "summary", label: "Financial Summary", icon: CreditCard },
-    { key: "income", label: "Monthly Income", icon: TrendingUp },
-    { key: "unpaid", label: "Receivables", icon: FileBarChart },
-    { key: "occupancy", label: "Occupancy", icon: DoorOpen },
-    { key: "history", label: "History", icon: Users },
-  ];
+  const role = user?.role || "Boarder";
+
+  const tabs = useMemo(() => {
+    const allTabs: { key: ReportType; label: string; icon: React.ElementType; roles?: string[] }[] = [
+      { key: "summary", label: "Financial Summary", icon: CreditCard, roles: ["Admin"] },
+      { key: "income", label: "Monthly Income", icon: TrendingUp, roles: ["Admin"] },
+      { key: "unpaid", label: "Receivables", icon: FileBarChart, roles: ["Admin"] },
+      { key: "occupancy", label: "Occupancy", icon: DoorOpen },
+      { key: "history", label: "History", icon: Users },
+    ];
+    return allTabs.filter(tab => !tab.roles || tab.roles.includes(role));
+  }, [role]);
+
+  // If role doesn't allow current active tab, switch to first allowed
+  React.useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t.key === active)) {
+      setActive(tabs[0].key);
+    }
+  }, [tabs, active]);
 
   const getBoarder = (boarderId: string) => boarders.find(b => b.id === boarderId);
   const getBoarderName = (boarderId: string) => getBoarder(boarderId)?.fullName ?? "Unknown";
@@ -325,8 +337,12 @@ const ReportsPage = () => {
                           <div className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-colors ${isFull ? "bg-accent/10" : "bg-success/10"}`}>
                             <DoorOpen className={`h-5 w-5 ${isFull ? "text-accent" : "text-success"}`} />
                           </div>
-                          <div>
-                            <p className="font-bold text-base text-foreground leading-tight">{r.name}</p>
+                          <div className="min-w-0">
+                            <div className="marquee-container overflow-hidden">
+                              <p className="font-bold text-base text-foreground leading-tight marquee-scroll" title={r.name}>
+                                {r.name}
+                              </p>
+                            </div>
                             <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase tracking-widest mt-0.5">Floor {r.floor || 1}</p>
                           </div>
                         </div>
