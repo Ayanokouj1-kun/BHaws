@@ -26,6 +26,7 @@ interface DataContextType {
     maintenance: MaintenanceRequest[];
     expenses: Expense[];
     announcements: Announcement[];
+    profiles: User[];
     user: User | null;
     isLoading: boolean;
     login: (username: string, password: string) => Promise<boolean>;
@@ -48,6 +49,7 @@ interface DataContextType {
     addAnnouncement: (ann: Announcement) => Promise<void>;
     deleteAnnouncement: (id: string) => Promise<void>;
     updateSettings: (newSettings: BhSettings) => Promise<void>;
+    updateUserRole: (userId: string, newRole: "Admin" | "Staff" | "Boarder") => Promise<void>;
     addLog: (action: string, entity: string, entityId: string, details: string) => Promise<void>;
     resetData: () => void;
     loadStats: () => any;
@@ -70,7 +72,6 @@ const DEFAULT_SETTINGS: BhSettings = {
 const MOCK_USERS = [
     { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" as const },
     { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" as const },
-    { id: "u3", username: "boarder", fullName: "Juan Dela Cruz", role: "Boarder" as const, boarderId: "bo1" },
 ];
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -84,6 +85,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [maintenance, setMaintenance] = useState<MaintenanceRequest[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [profiles, setProfiles] = useState<User[]>([]);
     const [user, setUser] = useState<User | null>(null);
     // Start as FALSE so the login page shows immediately
     const [isLoading, setIsLoading] = useState(false);
@@ -110,16 +112,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return data;
             };
 
-            const [roomsRes, boardersRes, paymentsRes, logsRes, settingsRes, maintRes, expRes, annRes] =
+            const [roomsRes, boardersRes, paymentsRes, logsRes, settingsRes, maintRes, expRes, annRes, profRes] =
                 await Promise.all([
                     supabase.from("rooms").select("*, beds(*)"),
-                    safe("boarders"),
+                    supabase.from("boarders").select("*").order("created_at", { ascending: true }),
                     safe("payments"),
                     supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
                     supabase.from("settings").select("*").eq("id", 1).single(),
                     safe("maintenance_requests"),
                     safe("expenses"),
                     safe("announcements"),
+                    safe("profiles"),
                 ]);
 
             if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => {
@@ -136,7 +139,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 };
             }));
 
-            if (boardersRes) setBoarders(boardersRes.map((b: any) => ({
+            if (boardersRes?.data) setBoarders(boardersRes.data.map((b: any) => ({
                 id: b.id,
                 fullName: b.full_name || "",
                 contactNumber: b.contact_number || "",
@@ -157,8 +160,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })));
 
             if (paymentsRes) setPayments(paymentsRes.map((p: any) => ({
-                ...p, boarderId: p.boarder_id, paidDate: p.paid_date, dueDate: p.due_date,
-                lateFee: parseFloat(p.late_fee) || 0, receiptNumber: p.receipt_number, createdAt: p.created_at
+                ...p,
+                boarderId: p.boarder_id,
+                amount: parseFloat(p.amount) || 0,
+                paidDate: p.paid_date,
+                dueDate: p.due_date,
+                lateFee: parseFloat(p.late_fee) || 0,
+                receiptNumber: p.receipt_number,
+                createdAt: p.created_at
             })));
 
             if (logsRes?.data) setAuditLogs(logsRes.data.map((l: any) => ({
@@ -168,11 +177,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (settingsRes?.data) {
                 const s = settingsRes.data;
                 setSettings({
-                    ...s,
-                    ownerName: s.owner_name,
-                    taxId: s.tax_id,
-                    website: s.website,
-                    lateFeeEnabled: s.late_fee_enabled,
+                    name: s.name || "BHaws Residences",
+                    address: s.address || "",
+                    contact: s.contact || "",
+                    email: s.email || "",
+                    ownerName: s.owner_name || "",
+                    currency: s.currency || "PHP",
+                    lateFeeEnabled: s.late_fee_enabled !== false,
                     lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
                     gracePeriodDays: s.grace_period_days || 0
                 });
@@ -183,6 +194,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })));
             if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
             if (annRes) setAnnouncements(annRes.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
+            if (profRes) setProfiles(profRes.map((p: any) => ({ ...p, fullName: p.full_name, boarderId: p.boarder_id })));
 
             console.log("✅ BHaws: Cloud sync complete.");
         } catch (err) {
@@ -199,31 +211,55 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const login = async (username: string, password: string): Promise<boolean> => {
         const lc = username.toLowerCase().trim();
 
-        // 1. Always try the built-in mock users first for reliability
+        // 1. Check built-in mock users (Admin/Staff)
         const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
         if (mock) {
             setUser(mock as any);
             localStorage.setItem("bh_user", JSON.stringify(mock));
-            // Trigger background sync after login
             refreshData();
             return true;
         }
 
-        // 2. Try Supabase profiles table
+        // 2. Check dynamic boarderXX login
+        const boarderMatch = lc.match(/^boarder(\d+)$/);
+        if (boarderMatch && password.toLowerCase().trim() === lc) {
+            const index = parseInt(boarderMatch[1], 10) - 1; // "boarder01" -> 0
+            if (index >= 0) {
+                // Fetch all active boarders to check sequence
+                const { data: bList } = await supabase
+                    .from("boarders")
+                    .select("*")
+                    .order("created_at", { ascending: true });
+
+                if (bList && bList[index]) {
+                    const boarder = bList[index];
+                    const u = {
+                        id: `ub-${boarder.id}`,
+                        username: lc,
+                        fullName: boarder.full_name,
+                        role: "Boarder" as const,
+                        boarderId: boarder.id
+                    };
+                    setUser(u as any);
+                    localStorage.setItem("bh_user", JSON.stringify(u));
+                    refreshData();
+                    return true;
+                }
+            }
+        }
+
+        // 3. Try Supabase profiles table (for any manually created accounts)
         try {
             const { data: profile, error } = await supabase
                 .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
-                // If this is a boarder account, require linked boarder to be Active
                 if (profile.role === "Boarder" && profile.boarder_id) {
                     const { data: boarder } = await supabase
                         .from("boarders")
                         .select("status")
                         .eq("id", profile.boarder_id)
                         .single();
-                    if (!boarder || boarder.status !== "Active") {
-                        return false;
-                    }
+                    if (!boarder || boarder.status !== "Active") return false;
                 }
 
                 const u = {
@@ -236,7 +272,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return true;
             }
         } catch (e) {
-            console.warn("Profile lookup failed, mock used as fallback:", e);
+            console.warn("Profile lookup failed:", e);
         }
 
         return false;
@@ -259,8 +295,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } catch { /* non-blocking */ }
     };
 
-    // --- ROOMS ---
     const addRoom = async (room: Room) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can add rooms"); return; }
         const underMaintenance = !!room.underMaintenance;
         const initialStatus = underMaintenance ? "Under Maintenance" : "Available";
 
@@ -282,6 +318,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const updateRoom = async (room: Room) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can edit rooms"); return; }
         const underMaintenance = !!room.underMaintenance;
         const newStatus = computeRoomStatus(room.beds || [], underMaintenance);
 
@@ -311,6 +348,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteRoom = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete rooms"); return; }
         const { error } = await supabase.from("rooms").delete().eq("id", id);
         if (error) toast.error("Failed to delete room");
         else { toast.success("Room deleted"); addLog("Room Deleted", "Room", id, "Room removed."); refreshData(); }
@@ -318,6 +356,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- BOARDERS ---
     const addBoarder = async (boarder: Boarder) => {
+        if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
         const { data: nb, error } = await supabase.from("boarders").insert([{
             full_name: boarder.fullName,
             contact_number: boarder.contactNumber,
@@ -373,6 +412,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
     const deleteBoarder = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete boarders"); return; }
         // 1. Find the boarder's assigned bed BEFORE deleting
         const { data: boarderData } = await supabase
             .from("boarders")
@@ -428,6 +468,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deletePayment = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete payment records"); return; }
         const { error } = await supabase.from("payments").delete().eq("id", id);
         if (error) toast.error("Failed to delete payment");
         else {
@@ -441,10 +482,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const addMaintenance = async (req: MaintenanceRequest) => {
         const { error } = await supabase.from("maintenance_requests").insert([{
             room_id: req.roomId, boarder_id: req.boarderId, title: req.title,
-            description: req.description, priority: req.priority, status: req.status
+            description: req.description, priority: req.priority, status: req.status,
+            category: req.category, images: req.images,
         }]);
-        if (error) toast.error("Failed to submit request");
-        else {
+        if (error) {
+            console.error("Supabase Maintenance Insert Error:", error);
+            toast.error("Failed to submit request to database");
+        } else {
             toast.success("Request submitted");
             addLog("Maintenance Requested", "Maintenance", req.roomId, `New request: ${req.title}`);
             refreshData();
@@ -453,18 +497,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const updateMaintenance = async (req: MaintenanceRequest) => {
         const { error } = await supabase.from("maintenance_requests").update({
-            status: req.status, priority: req.priority,
-            resolved_at: req.status === "Resolved" ? new Date().toISOString() : null
+            title: req.title,
+            description: req.description,
+            category: req.category,
+            priority: req.priority,
+            status: req.status,
+            images: req.images,
+            resolved_at: req.status === "Resolved" ? new Date().toISOString() : req.resolvedAt
         }).eq("id", req.id);
-        if (error) toast.error("Failed to update status");
-        else {
-            toast.success("Status updated");
+        if (error) {
+            console.error("Supabase Maintenance Update Error:", error);
+            toast.error("Failed to update status in database");
+        } else {
+            toast.success("Request updated");
             addLog("Maintenance Updated", "Maintenance", req.id, `Request status changed to ${req.status}.`);
             refreshData();
         }
     };
 
     const deleteMaintenance = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete requests"); return; }
         await supabase.from("maintenance_requests").delete().eq("id", id);
         refreshData();
     };
@@ -492,12 +544,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteExpense = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete expenses"); return; }
         await supabase.from("expenses").delete().eq("id", id);
         refreshData();
     };
 
     // --- ANNOUNCEMENTS ---
     const addAnnouncement = async (ann: Announcement) => {
+        if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
         await supabase.from("announcements").insert([{
             title: ann.title, message: ann.message, priority: ann.priority, expires_at: ann.expiresAt
         }]);
@@ -506,6 +560,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteAnnouncement = async (id: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete announcements"); return; }
         const { error } = await supabase.from("announcements").delete().eq("id", id);
         if (!error) addLog("Announcement Deleted", "Announcement", id, `Announcement was removed.`);
         refreshData();
@@ -513,6 +568,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- SETTINGS ---
     const updateSettings = async (newSettings: BhSettings) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can modify system settings"); return; }
         try {
             setIsLoading(true);
             const { error } = await supabase.from("settings").update({
@@ -541,6 +597,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(false);
         }
     };
+    const updateUserRole = async (userId: string, newRole: "Admin" | "Staff" | "Boarder") => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can manage users"); return; }
+        const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
+        if (error) { toast.error("Failed to update user role"); return; }
+        toast.success(`User role updated to ${newRole}`);
+        addLog("User Role Updated", "User", userId, `Role changed to ${newRole}`);
+        refreshData();
+    };
 
     // --- UTILS ---
     const resetData = () => toast.error("Cloud data cannot be reset this way.");
@@ -558,7 +622,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return (
         <DataContext.Provider value={{
             rooms, boarders, payments, auditLogs, settings,
-            maintenance, expenses, announcements, user, isLoading,
+            maintenance, expenses, announcements, profiles, user, isLoading,
             login, logout,
             addRoom, updateRoom, deleteRoom,
             addBoarder, updateBoarder, deleteBoarder,
@@ -566,7 +630,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             addMaintenance, updateMaintenance, deleteMaintenance,
             addExpense, updateExpense, deleteExpense,
             addAnnouncement, deleteAnnouncement,
-            updateSettings, addLog, resetData, loadStats, refreshData
+            updateSettings, updateUserRole, addLog, resetData, loadStats, refreshData
         }}>
             {children}
         </DataContext.Provider>

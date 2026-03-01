@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Wrench, AlertCircle, Clock, CheckCircle2, XCircle, Search, Trash2, Edit } from "lucide-react";
+import { Plus, Wrench, AlertCircle, Clock, CheckCircle2, XCircle, Search, Trash2, Edit, Droplets, Zap, Home, Tv, Hammer, ImagePlus, X, Image as ImageIcon } from "lucide-react";
 import { MaintenanceRequest } from "@/types";
 
 const priorityColors: Record<string, string> = {
@@ -27,6 +27,26 @@ const statusColors: Record<string, string> = {
     Closed: "bg-muted text-muted-foreground border-border",
 };
 
+const categoryColors: Record<string, string> = {
+    Plumbing: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    Electrical: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+    Structural: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+    Appliance: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    Carpentry: "bg-amber-700/10 text-amber-800 border-amber-700/20",
+    Other: "bg-muted text-muted-foreground border-border",
+};
+
+const categoryIcons: Record<string, any> = {
+    Plumbing: Droplets,
+    Electrical: Zap,
+    Structural: Home,
+    Appliance: Tv,
+    Carpentry: Hammer,
+    Other: Wrench,
+};
+
+const CATEGORIES = ["Plumbing", "Electrical", "Structural", "Appliance", "Carpentry", "Other"] as const;
+
 const statusIcons: Record<string, React.ReactNode> = {
     Open: <AlertCircle className="h-3.5 w-3.5" />,
     "In Progress": <Clock className="h-3.5 w-3.5" />,
@@ -38,12 +58,14 @@ const emptyForm = (): Partial<MaintenanceRequest> => ({
     roomId: "",
     title: "",
     description: "",
+    category: "Other",
     priority: "Medium",
     status: "Open",
+    images: [],
 });
 
 const MaintenancePage = () => {
-    const { rooms, maintenance, addMaintenance, updateMaintenance, deleteMaintenance, isLoading } = useData();
+    const { rooms, maintenance, addMaintenance, updateMaintenance, deleteMaintenance, isLoading, user, boarders } = useData();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [priorityFilter, setPriorityFilter] = useState("all");
@@ -51,7 +73,14 @@ const MaintenancePage = () => {
     const [mode, setMode] = useState<"add" | "edit">("add");
     const [current, setCurrent] = useState<Partial<MaintenanceRequest>>(emptyForm());
 
+    const isAdmin = user?.role === "Admin";
+    const isStaff = user?.role === "Staff";
+    const isBoarder = user?.role === "Boarder";
+
     const filtered = maintenance.filter(m => {
+        // Security: Boarders only see their own requests (or requests for their room)
+        if (isBoarder && m.boarderId !== user?.boarderId) return false;
+
         const matchSearch = m.title.toLowerCase().includes(search.toLowerCase()) ||
             m.description.toLowerCase().includes(search.toLowerCase());
         const matchStatus = statusFilter === "all" || m.status === statusFilter;
@@ -61,16 +90,21 @@ const MaintenancePage = () => {
 
     const getRoomName = (id: string) => rooms.find(r => r.id === id)?.name ?? "Unknown Room";
 
-    const stats = [
-        { label: "Open", value: maintenance.filter(m => m.status === "Open").length, color: "text-accent" },
-        { label: "In Progress", value: maintenance.filter(m => m.status === "In Progress").length, color: "text-warning" },
-        { label: "Resolved", value: maintenance.filter(m => m.status === "Resolved").length, color: "text-success" },
-        { label: "Urgent", value: maintenance.filter(m => m.priority === "Urgent").length, color: "text-destructive" },
+    const statsList = [
+        { label: "Open", value: filtered.filter(m => m.status === "Open").length, color: "text-accent", bgColor: "bg-accent/10", icon: AlertCircle },
+        { label: "In Progress", value: filtered.filter(m => m.status === "In Progress").length, color: "text-warning", bgColor: "bg-warning/10", icon: Clock },
+        { label: "Resolved", value: filtered.filter(m => m.status === "Resolved").length, color: "text-success", bgColor: "bg-success/10", icon: CheckCircle2 },
+        { label: "Urgent", value: filtered.filter(m => m.priority === "Urgent").length, color: "text-destructive", bgColor: "bg-destructive/10", icon: Wrench },
     ];
 
     const handleOpenAdd = () => {
         setMode("add");
-        setCurrent(emptyForm());
+        const boarder = boarders.find(b => b.id === user?.boarderId);
+        setCurrent({
+            ...emptyForm(),
+            boarderId: user?.boarderId,
+            roomId: boarder?.assignedRoomId || ""
+        });
         setIsDialogOpen(true);
     };
 
@@ -86,7 +120,13 @@ const MaintenancePage = () => {
             return;
         }
         if (mode === "add") {
-            addMaintenance({ ...current as MaintenanceRequest, id: `m${Date.now()}`, createdAt: new Date().toISOString().split("T")[0] });
+            addMaintenance({
+                ...current as MaintenanceRequest,
+                id: `m${Date.now()}`,
+                createdAt: new Date().toISOString().split("T")[0],
+                boarderId: user?.boarderId || current.boarderId,
+                status: "Open"
+            });
             toast.success("Maintenance request submitted");
         } else {
             updateMaintenance(current as MaintenanceRequest);
@@ -95,7 +135,42 @@ const MaintenancePage = () => {
         setIsDialogOpen(false);
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const currentImages = current.images || [];
+        if (currentImages.length + files.length > 4) {
+            toast.error("Maximum 4 photos allowed");
+            return;
+        }
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target?.result as string;
+                setCurrent(prev => ({
+                    ...prev,
+                    images: [...(prev.images || []), base64]
+                }));
+            };
+            reader.readAsDataURL(file);
+        });
+        e.target.value = ""; // Reset input
+    };
+
+    const removeImage = (index: number) => {
+        setCurrent(prev => ({
+            ...prev,
+            images: (prev.images || []).filter((_, i) => i !== index)
+        }));
+    };
+
     const handleDelete = (id: string) => {
+        if (!isAdmin) {
+            toast.error("Unauthorized: Only admins can delete requests.");
+            return;
+        }
         if (confirm("Delete this maintenance request?")) {
             deleteMaintenance(id);
             toast.success("Request deleted");
@@ -103,6 +178,7 @@ const MaintenancePage = () => {
     };
 
     const handleQuickStatus = (req: MaintenanceRequest, status: MaintenanceRequest["status"]) => {
+        if (isBoarder) return;
         updateMaintenance({
             ...req, status,
             resolvedAt: status === "Resolved" ? new Date().toISOString().split("T")[0] : req.resolvedAt
@@ -116,9 +192,14 @@ const MaintenancePage = () => {
         <AppLayout>
             <div className="animate-fade-in space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="page-header">Maintenance</h1>
-                        <p className="page-subtitle">Track and manage room maintenance requests</p>
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-500/20">
+                            <Wrench className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <div>
+                            <h1 className="page-header">Maintenance</h1>
+                            <p className="page-subtitle">Track and manage room maintenance requests</p>
+                        </div>
                     </div>
                     <Button className="gap-2 shrink-0" onClick={handleOpenAdd}>
                         <Plus className="h-4 w-4" /> New Request
@@ -126,13 +207,21 @@ const MaintenancePage = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {stats.map(s => (
-                        <div key={s.label} className="stat-card text-center">
-                            <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">{s.label}</p>
-                        </div>
-                    ))}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {statsList.map(s => {
+                        const Icon = s.icon;
+                        return (
+                            <div key={s.label} className="stat-card flex items-center gap-4">
+                                <div className={`p-3 rounded-2xl ${s.bgColor}`}>
+                                    <Icon className={`h-6 w-6 ${s.color}`} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{s.label}</p>
+                                    <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Filters */}
@@ -177,57 +266,77 @@ const MaintenancePage = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filtered.map(req => (
-                                <TableRow key={req.id} className="hover:bg-muted/20 group">
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                                                <Wrench className="h-4 w-4 text-muted-foreground" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-foreground">{req.title}</p>
-                                                <p className="text-xs text-muted-foreground line-clamp-1">{req.description}</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-sm font-bold text-foreground whitespace-nowrap">
-                                        {getRoomName(req.roomId)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${priorityColors[req.priority]}`}>
-                                            {req.priority}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={`flex items-center gap-1.5 w-fit text-[9px] font-bold uppercase whitespace-nowrap px-2 py-0.5 h-6 ${statusColors[req.status]}`}>
-                                            <span className="shrink-0 scale-90">{statusIcons[req.status]}</span>
-                                            {req.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{req.createdAt}</TableCell>
-                                    <TableCell className="text-right whitespace-nowrap">
-                                        <div className="flex gap-1 items-center justify-end flex-nowrap">
-                                            {req.status === "Open" && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-warning hover:bg-warning/5" onClick={() => handleQuickStatus(req, "In Progress")}>
-                                                    Start
-                                                </Button>
-                                            )}
-                                            {req.status === "In Progress" && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs text-success hover:bg-success/5" onClick={() => handleQuickStatus(req, "Resolved")}>
-                                                    Resolve
-                                                </Button>
-                                            )}
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors" onClick={() => handleEdit(req)}>
-                                                <Edit className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(req.id)}>
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            {filtered.length === 0 && (
+                            {filtered.length > 0 ? (
+                                filtered.map((req) => {
+                                    const Icon = categoryIcons[req.category || "Other"];
+                                    return (
+                                        <TableRow key={req.id} className="hover:bg-muted/20 group">
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${categoryColors[req.category || "Other"]}`}>
+                                                        <Icon className="h-5 w-5" strokeWidth={1.5} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold text-foreground truncate">{req.title}</p>
+                                                            {req.images && req.images.length > 0 && (
+                                                                <Badge variant="secondary" className="h-4 px-1 text-[8px] gap-1 bg-accent/5 text-accent border-accent/20">
+                                                                    <ImageIcon className="h-2 w-2" /> {req.images.length}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground line-clamp-1">{req.description}</p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-xs font-bold text-foreground uppercase tracking-tight">{getRoomName(req.roomId)}</span>
+                                                    <Badge variant="outline" className={`w-fit text-[8px] font-bold uppercase h-4 px-1.5 ${categoryColors[req.category || "Other"]}`}>
+                                                        {req.category || "Other"}
+                                                    </Badge>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${priorityColors[req.priority]}`}>
+                                                    {req.priority}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={`flex items-center gap-1.5 w-fit text-[9px] font-bold uppercase whitespace-nowrap px-2 py-0.5 h-6 ${statusColors[req.status]}`}>
+                                                    <span className="shrink-0 scale-90">{statusIcons[req.status]}</span>
+                                                    {req.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{req.createdAt}</TableCell>
+                                            <TableCell className="text-right whitespace-nowrap">
+                                                <div className="flex gap-1 items-center justify-end flex-nowrap">
+                                                    {!isBoarder && req.status === "Open" && (
+                                                        <Button size="sm" variant="ghost" className="h-8 text-xs text-warning hover:bg-warning/5" onClick={() => handleQuickStatus(req, "In Progress")}>
+                                                            Start
+                                                        </Button>
+                                                    )}
+                                                    {!isBoarder && req.status === "In Progress" && (
+                                                        <Button size="sm" variant="ghost" className="h-8 text-xs text-success hover:bg-success/5" onClick={() => handleQuickStatus(req, "Resolved")}>
+                                                            Resolve
+                                                        </Button>
+                                                    )}
+                                                    {!isBoarder && (
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors" onClick={() => handleEdit(req)}>
+                                                            <Edit className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(req.id)}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            ) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-14 text-muted-foreground italic">
                                         No maintenance requests found
@@ -240,20 +349,39 @@ const MaintenancePage = () => {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{mode === "add" ? "New Maintenance Request" : "Edit Request"}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label>Room *</Label>
-                            <Select value={current.roomId} onValueChange={v => setCurrent({ ...current, roomId: v })}>
-                                <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
-                                <SelectContent>
-                                    {rooms.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label>Room *</Label>
+                                <Select value={current.roomId} onValueChange={v => setCurrent({ ...current, roomId: v })}>
+                                    <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
+                                    <SelectContent>
+                                        {rooms.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Category *</Label>
+                                <Select value={current.category} onValueChange={v => setCurrent({ ...current, category: v as MaintenanceRequest["category"] })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {CATEGORIES.map(c => (
+                                            <SelectItem key={c} value={c}>
+                                                <div className="flex items-center gap-2">
+                                                    {(() => { const Icon = categoryIcons[c]; return <Icon className="h-3.5 w-3.5" />; })()}
+                                                    {c}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+
                         <div className="grid gap-2">
                             <Label>Title *</Label>
                             <Input value={current.title} onChange={e => setCurrent({ ...current, title: e.target.value })} placeholder="e.g., Leaking faucet" />
@@ -286,6 +414,38 @@ const MaintenancePage = () => {
                                         <SelectItem value="Closed">Closed</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+                        </div>
+
+                        {/* Photo Attachment Section */}
+                        <div className="grid gap-2 pt-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="flex items-center gap-2">
+                                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                    Photos <span className="text-[10px] text-muted-foreground">(Max 4)</span>
+                                </Label>
+                                <span className="text-[10px] font-bold text-muted-foreground">{current.images?.length || 0}/4</span>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-2">
+                                {current.images?.map((img, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group">
+                                        <img src={img} className="h-full w-full object-cover" alt="" />
+                                        <button
+                                            onClick={() => removeImage(idx)}
+                                            className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {(current.images?.length || 0) < 4 && (
+                                    <label className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-muted/50 hover:border-accent/40 transition-all">
+                                        <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                                        <span className="text-[9px] font-bold text-muted-foreground">ADD</span>
+                                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                                    </label>
+                                )}
                             </div>
                         </div>
                     </div>

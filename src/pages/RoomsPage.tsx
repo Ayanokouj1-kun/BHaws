@@ -347,14 +347,16 @@ const RoomsPage = () => {
                       <Link to={`/rooms/${room.id}`}><Eye className="h-3.5 w-3.5 text-accent" /> Details</Link>
                     </Button>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors"
-                        onClick={() => handleOpenEdit(room)}
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors"
+                          onClick={() => handleOpenEdit(room)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       {isAdmin && (
                         <Button
                           variant="ghost"

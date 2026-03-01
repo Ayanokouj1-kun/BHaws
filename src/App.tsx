@@ -25,9 +25,14 @@ import { ThemeProvider } from "@/context/ThemeContext";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user } = useData();
   if (!user) return <Navigate to="/" replace />;
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -46,26 +51,56 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               {/* Boarder self-signup */}
               <Route path="/signup" element={<BoarderSignupPage />} />
-              {/* Dashboard is now a protected route at /dashboard */}
+
+              {/* Protected Routes */}
               <Route
                 path="/dashboard"
-                element={(
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                )}
+                element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
               />
-              <Route path="/rooms" element={<ProtectedRoute><RoomsPage /></ProtectedRoute>} />
-              <Route path="/rooms/:id" element={<ProtectedRoute><RoomDetails /></ProtectedRoute>} />
-              <Route path="/boarders" element={<ProtectedRoute><BoardersPage /></ProtectedRoute>} />
-              <Route path="/boarders/:id" element={<ProtectedRoute><BoarderDetails /></ProtectedRoute>} />
-              <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-              <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogsPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-              <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+              <Route
+                path="/rooms"
+                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><RoomsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/rooms/:id"
+                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><RoomDetails /></ProtectedRoute>}
+              />
+              <Route
+                path="/boarders"
+                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><BoardersPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/boarders/:id"
+                element={<ProtectedRoute><BoarderDetails /></ProtectedRoute>}
+              />
+              <Route
+                path="/payments"
+                element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/maintenance"
+                element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>}
+              />
+              <Route
+                path="/expenses"
+                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><ExpensesPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/reports"
+                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><ReportsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/audit-logs"
+                element={<ProtectedRoute allowedRoles={["Admin"]}><AuditLogsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/settings"
+                element={<ProtectedRoute allowedRoles={["Admin"]}><SettingsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/account"
+                element={<ProtectedRoute><AccountPage /></ProtectedRoute>}
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

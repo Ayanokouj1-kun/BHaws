@@ -24,8 +24,19 @@ const fmt = (n: number) =>
   n >= 1000 ? `₱${(n / 1000).toFixed(1)}k` : `₱${n}`;
 
 const Dashboard = () => {
-  const { rooms, boarders, payments, auditLogs, maintenance, expenses, isLoading } = useData();
+  const { rooms, boarders, payments, auditLogs, maintenance, expenses, announcements, user, isLoading } = useData();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === "Admin";
+  const isStaff = user?.role === "Staff";
+  const isBoarder = user?.role === "Boarder";
+
+  // ── Boarder specific logic ──
+  const myProfile = useMemo(() => isBoarder ? boarders.find(b => b.id === user?.boarderId) : null, [isBoarder, boarders, user]);
+  const myRoom = useMemo(() => myProfile ? rooms.find(r => r.id === myProfile.assignedRoomId) : null, [myProfile, rooms]);
+  const myBed = useMemo(() => myRoom ? myRoom.beds.find(b => b.id === myProfile?.assignedBedId) : null, [myRoom, myProfile]);
+  const myPayments = useMemo(() => isBoarder ? payments.filter(p => p.boarderId === user?.boarderId).sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()) : [], [isBoarder, payments, user]);
+  const activeAnnouncements = useMemo(() => announcements.filter(a => !a.expiresAt || new Date(a.expiresAt) > new Date()), [announcements]);
 
   // ── Derived stats (recalculated whenever data changes) ──────────────────────
   const stats = useMemo(() => {
@@ -115,287 +126,395 @@ const Dashboard = () => {
         {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="page-header">Dashboard</h1>
+            <h1 className="page-header">{isBoarder ? `Welcome, ${user?.fullName}` : "Dashboard"}</h1>
             <p className="page-subtitle">
               {new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/boarders")}>
-              <Plus className="h-3.5 w-3.5" /> Add Boarder
-            </Button>
-            <Button size="sm" className="gap-2" onClick={() => navigate("/reports")}>
-              <Download className="h-3.5 w-3.5" /> Reports
-            </Button>
-          </div>
+          {!isBoarder && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/boarders")}>
+                <Plus className="h-3.5 w-3.5" /> Add Boarder
+              </Button>
+              <Button size="sm" className="gap-2" onClick={() => navigate("/reports")}>
+                <Download className="h-3.5 w-3.5" /> Reports
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* ── Alerts ──────────────────────────────────────────────────── */}
-        {stats.urgentMaintenance > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20 text-sm text-destructive font-medium">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {stats.urgentMaintenance} urgent maintenance {stats.urgentMaintenance === 1 ? "request requires" : "requests require"} immediate attention.
-            <Button size="sm" variant="ghost" className="ml-auto text-destructive hover:bg-destructive/10 h-7 px-2 text-xs" onClick={() => navigate("/maintenance")}>
-              View →
-            </Button>
-          </div>
-        )}
-        {stats.overdueCount > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 text-sm text-warning font-medium">
-            <Bell className="h-4 w-4 shrink-0" />
-            {stats.overdueCount} overdue payment{stats.overdueCount > 1 ? "s" : ""} — total ₱{stats.overdueTotal.toLocaleString()} outstanding.
-            <Button size="sm" variant="ghost" className="ml-auto text-warning hover:bg-warning/10 h-7 px-2 text-xs" onClick={() => navigate("/payments")}>
-              View →
-            </Button>
-          </div>
-        )}
+        {isBoarder ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* My Accommodation */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-border/60 shadow-sm bg-accent/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Home className="h-4 w-4 text-accent" /> My Room
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-foreground">{myRoom?.name || "No Assignment"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{myBed?.name || "No Bed Assigned"} · Floor {myRoom?.floor || "-"}</p>
+                  </CardContent>
+                </Card>
 
-        {/* ── KPI Cards ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-          {/* Boarders */}
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/boarders")}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 rounded-xl bg-accent/10 group-hover:bg-accent/20 transition-colors">
-                  <Users className="h-5 w-5 text-accent" />
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-accent transition-colors" />
+                <Card className="border-border/60 shadow-sm bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-success" /> Payment Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-foreground">
+                      {myPayments.some(p => p.status === "Overdue") ? "Action Required" : "Up to Date"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {myPayments.filter(p => p.status === "Paid").length} payments made ·
+                      <span className={myPayments.some(p => p.status === "Overdue") ? "text-destructive font-bold" : ""}>
+                        {myPayments.filter(p => p.status === "Overdue").length} overdue
+                      </span>
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-              <p className="text-2xl font-bold text-foreground">{stats.activeBoarders}</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-0.5">Active Boarders</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.totalBoarders} total registered</p>
-            </CardContent>
-          </Card>
 
-          {/* Occupancy */}
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/rooms")}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
-                  <Building2 className="h-5 w-5 text-success" />
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.availableRooms} Available</span>
-                  {stats.lockedRooms > 0 && <span className="text-[10px] font-bold text-orange-600 bg-orange-600/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.lockedRooms} Locked</span>}
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.occupancyPct}%</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-0.5">Occupancy Rate</p>
-              <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${stats.occupancyPct}%` }} />
-              </div>
-              <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.occupiedBeds}/{stats.totalBeds} beds occupied</p>
-            </CardContent>
-          </Card>
+              {/* Announcements for boarders */}
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-accent" /> Announcements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {activeAnnouncements.length > 0 ? activeAnnouncements.map(ann => (
+                    <div key={ann.id} className="p-4 rounded-xl border border-border/50 bg-muted/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-sm text-foreground">{ann.title}</h3>
+                        <Badge variant="outline" className={`text-[9px] uppercase ${ann.priority === "High" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-accent/10 text-accent border-accent/20"}`}>
+                          {ann.priority}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{ann.message}</p>
+                      <p className="text-[9px] text-muted-foreground/50 mt-3 uppercase font-bold tracking-widest">{ann.createdAt}</p>
+                    </div>
+                  )) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-sm">No new announcements at this time.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Total Income */}
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/payments")}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                </div>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${stats.overdueCount > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
-                  {stats.overdueCount > 0 ? `${stats.overdueCount} overdue` : "All clear"}
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{fmt(stats.totalIncome)}</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-0.5">Total Collected</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.paidCount} paid · {stats.pendingCount} pending</p>
-            </CardContent>
-          </Card>
+            {/* Right sidebar for boarders */}
+            <div className="space-y-6">
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">Quick Links</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => navigate("/maintenance")}>
+                    <Wrench className="h-4 w-4 text-orange-500" /> Request Maintenance
+                  </Button>
+                  <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => navigate("/payments")}>
+                    <Receipt className="h-4 w-4 text-success" /> View My Payments
+                  </Button>
+                </CardContent>
+              </Card>
 
-          {/* Net Cash Flow */}
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/expenses")}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`p-2.5 rounded-xl transition-colors ${stats.netFlow >= 0 ? "bg-success/10 group-hover:bg-success/20" : "bg-destructive/10 group-hover:bg-destructive/20"}`}>
-                  {stats.netFlow >= 0
-                    ? <TrendingUp className="h-5 w-5 text-success" />
-                    : <TrendingDown className="h-5 w-5 text-destructive" />}
-                </div>
-                {stats.netFlow >= 0
-                  ? <ArrowUpRight className="h-4 w-4 text-success/60 group-hover:text-success transition-colors" />
-                  : <ArrowDownRight className="h-4 w-4 text-destructive/60 group-hover:text-destructive transition-colors" />}
-              </div>
-              <p className={`text-2xl font-bold ${stats.netFlow >= 0 ? "text-success" : "text-destructive"}`}>
-                {stats.netFlow >= 0 ? "+" : ""}{fmt(stats.netFlow)}
-              </p>
-              <p className="text-xs font-semibold text-muted-foreground mt-0.5">Net Cash Flow</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-1">Expenses: {fmt(stats.totalExpenses)}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── Charts Row ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-          {/* Area chart — Income vs Expenses (live) */}
-          <Card className="xl:col-span-2 border-border/60 shadow-sm">
-            <CardHeader className="pb-0">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold">Revenue Overview</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Monthly income vs expenses · updates in real-time as payments are recorded</p>
-                </div>
-                <Badge variant="outline" className="text-[10px] font-bold text-accent border-accent/20 bg-accent/5">Live</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {chartData.length === 0 ? (
-                <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
-                  No payment data yet. Record a payment to see analytics.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} dy={8} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} width={48} />
-                    <Tooltip
-                      cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }}
-                      contentStyle={{ borderRadius: "10px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }}
-                      formatter={(v: number, name: string) => [`₱${v.toLocaleString()}`, name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net Profit"]}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} formatter={v => v === "income" ? "Income" : v === "expenses" ? "Expenses" : "Profit"} />
-                    <Area type="monotone" dataKey="income" stroke="hsl(var(--accent))" strokeWidth={2} fill="url(#incomeGrad)" dot={false} activeDot={{ r: 4 }} />
-                    <Area type="monotone" dataKey="expenses" stroke="hsl(var(--destructive))" strokeWidth={2} fill="url(#expenseGrad)" dot={false} activeDot={{ r: 4 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sidebar: Payment Status + Quick Actions */}
-          <div className="space-y-4">
-
-            {/* Payment status bar chart */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-bold">Payment Status</CardTitle>
-                <p className="text-xs text-muted-foreground">{payments.length} total records</p>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <ResponsiveContainer width="100%" height={110}>
-                  <BarChart data={paymentBreakdown} barSize={28} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip
-                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }}
-                      contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }}
-                      formatter={(v: number) => [v, "Records"]}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {paymentBreakdown.map((entry, i) => (
-                        <rect key={i} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  {paymentBreakdown.map(item => (
-                    <div key={item.label} className="text-center">
-                      <p className="text-base font-bold text-foreground">{item.value}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">Recent Payments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {myPayments.slice(0, 3).map(p => (
+                    <div key={p.id} className="flex items-center justify-between py-1">
+                      <div>
+                        <p className="text-xs font-bold">{p.month}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase">{p.type}</p>
+                      </div>
+                      <Badge variant="outline" className={`text-[9px] ${p.status === "Paid" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20"}`}>
+                        {p.status}
+                      </Badge>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Maintenance snapshot */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold">Maintenance</CardTitle>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-accent" onClick={() => navigate("/maintenance")}>View all</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: "Open", value: maintenance.filter(m => m.status === "Open").length, color: "text-accent" },
-                  { label: "In Progress", value: maintenance.filter(m => m.status === "In Progress").length, color: "text-warning" },
-                  { label: "Resolved", value: maintenance.filter(m => m.status === "Resolved").length, color: "text-success" },
-                ].map(row => (
-                  <div key={row.label} className="flex items-center justify-between py-1">
-                    <span className="text-xs text-muted-foreground">{row.label}</span>
-                    <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  {myPayments.length === 0 && <p className="text-[10px] text-muted-foreground text-center">No payment history.</p>}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-
-        {/* ── Bottom Row ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Recent Activity */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold">Recent Activity</CardTitle>
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-accent" onClick={() => navigate("/audit-logs")}>View all →</Button>
+        ) : (
+          <>
+            {/* ── Alerts ──────────────────────────────────────────────────── */}
+            {stats.urgentMaintenance > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20 text-sm text-destructive font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {stats.urgentMaintenance} urgent maintenance {stats.urgentMaintenance === 1 ? "request requires" : "requests require"} immediate attention.
+                <Button size="sm" variant="ghost" className="ml-auto text-destructive hover:bg-destructive/10 h-7 px-2 text-xs" onClick={() => navigate("/maintenance")}>
+                  View →
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {auditLogs.slice(0, 6).map(log => (
-                <div key={log.id} className="flex items-start gap-3">
-                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border ${getLogColor(log.action)}`}>
-                    {getLogIcon(log.entity)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-foreground leading-snug">{log.action}
-                      <span className="font-normal text-muted-foreground"> · {log.entity}</span>
-                    </p>
-                    <p className="text-[9px] text-muted-foreground truncate">{log.details}</p>
-                  </div>
-                  <span className="text-[9px] text-muted-foreground/50 shrink-0 mt-0.5">{log.timestamp.slice(0, 10)}</span>
-                </div>
-              ))}
-              {auditLogs.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No activity yet</p>}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Add Boarder", icon: <Users className="h-4 w-4" />, path: "/boarders", bg: "bg-accent/5 hover:bg-accent/10 border-accent/20 text-accent" },
-                  { label: "Record Payment", icon: <CreditCard className="h-4 w-4" />, path: "/payments", bg: "bg-success/5 hover:bg-success/10 border-success/20 text-success" },
-                  { label: "Add Room", icon: <Building2 className="h-4 w-4" />, path: "/rooms", bg: "bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary" },
-                  { label: "New Expense", icon: <Receipt className="h-4 w-4" />, path: "/expenses", bg: "bg-warning/5 hover:bg-warning/10 border-warning/20 text-warning" },
-                  { label: "Maintenance", icon: <Wrench className="h-4 w-4" />, path: "/maintenance", bg: "bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/20 text-orange-600" },
-                  { label: "Reports", icon: <Download className="h-4 w-4" />, path: "/reports", bg: "bg-purple-500/5 hover:bg-purple-500/10 border-purple-500/20 text-purple-600" },
-                  { label: "Audit Logs", icon: <CheckCircle2 className="h-4 w-4" />, path: "/audit-logs", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground" },
-                  { label: "Settings", icon: <Settings className="h-4 w-4" />, path: "/settings", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground" },
-                ].map(a => (
-                  <button
-                    key={a.label}
-                    onClick={() => navigate(a.path)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${a.bg}`}
-                  >
-                    {a.icon} {a.label}
-                  </button>
-                ))}
+            )}
+            {stats.overdueCount > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 text-sm text-warning font-medium">
+                <Bell className="h-4 w-4 shrink-0" />
+                {stats.overdueCount} overdue payment{stats.overdueCount > 1 ? "s" : ""} — total ₱{stats.overdueTotal.toLocaleString()} outstanding.
+                <Button size="sm" variant="ghost" className="ml-auto text-warning hover:bg-warning/10 h-7 px-2 text-xs" onClick={() => navigate("/payments")}>
+                  View →
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+
+            {/* ── KPI Cards ───────────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+              {/* Boarders */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/boarders")}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-accent/10 group-hover:bg-accent/20 transition-colors">
+                      <Users className="h-5 w-5 text-accent" />
+                    </div>
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-accent transition-colors" />
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{stats.activeBoarders}</p>
+                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">Active Boarders</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.totalBoarders} total registered</p>
+                </CardContent>
+              </Card>
+
+              {/* Occupancy */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/rooms")}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
+                      <Building2 className="h-5 w-5 text-success" />
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.availableRooms} Available</span>
+                      {stats.lockedRooms > 0 && <span className="text-[10px] font-bold text-orange-600 bg-orange-600/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">{stats.lockedRooms} Locked</span>}
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{stats.occupancyPct}%</p>
+                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">Occupancy Rate</p>
+                  <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${stats.occupancyPct}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.occupiedBeds}/{stats.totalBeds} beds occupied</p>
+                </CardContent>
+              </Card>
+
+              {/* Total Income */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/payments")}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${stats.overdueCount > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
+                      {stats.overdueCount > 0 ? `${stats.overdueCount} overdue` : "All clear"}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{fmt(stats.totalIncome)}</p>
+                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">Total Collected</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.paidCount} paid · {stats.pendingCount} pending</p>
+                </CardContent>
+              </Card>
+
+              {/* Net Cash Flow */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate("/expenses")}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2.5 rounded-xl transition-colors ${stats.netFlow >= 0 ? "bg-success/10 group-hover:bg-success/20" : "bg-destructive/10 group-hover:bg-destructive/20"}`}>
+                      {stats.netFlow >= 0
+                        ? <TrendingUp className="h-5 w-5 text-success" />
+                        : <TrendingDown className="h-5 w-5 text-destructive" />}
+                    </div>
+                    {stats.netFlow >= 0
+                      ? <ArrowUpRight className="h-4 w-4 text-success/60 group-hover:text-success transition-colors" />
+                      : <ArrowDownRight className="h-4 w-4 text-destructive/60 group-hover:text-destructive transition-colors" />}
+                  </div>
+                  <p className={`text-2xl font-bold ${stats.netFlow >= 0 ? "text-success" : "text-destructive"}`}>
+                    {stats.netFlow >= 0 ? "+" : ""}{fmt(stats.netFlow)}
+                  </p>
+                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">Net Cash Flow</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Expenses: {fmt(stats.totalExpenses)}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* ── Charts Row ──────────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+              {/* Area chart — Income vs Expenses (live) */}
+              <Card className="xl:col-span-2 border-border/60 shadow-sm">
+                <CardHeader className="pb-0">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-base font-bold">Revenue Overview</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Monthly income vs expenses · updates in real-time as payments are recorded</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold text-accent border-accent/20 bg-accent/5">Live</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {chartData.length === 0 ? (
+                    <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
+                      No payment data yet. Record a payment to see analytics.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} dy={8} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `₱${(v / 1000).toFixed(0)}k`} width={48} />
+                        <Tooltip
+                          cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }}
+                          contentStyle={{ borderRadius: "10px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }}
+                          formatter={(v: number, name: string) => [`₱${v.toLocaleString()}`, name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net Profit"]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} formatter={v => v === "income" ? "Income" : v === "expenses" ? "Expenses" : "Profit"} />
+                        <Area type="monotone" dataKey="income" stroke="hsl(var(--accent))" strokeWidth={2} fill="url(#incomeGrad)" dot={false} activeDot={{ r: 4 }} />
+                        <Area type="monotone" dataKey="expenses" stroke="hsl(var(--destructive))" strokeWidth={2} fill="url(#expenseGrad)" dot={false} activeDot={{ r: 4 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sidebar: Payment Status + Quick Actions */}
+              <div className="space-y-4">
+
+                {/* Payment status bar chart */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-sm font-bold">Payment Status</CardTitle>
+                    <p className="text-xs text-muted-foreground">{payments.length} total records</p>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <ResponsiveContainer width="100%" height={110}>
+                      <BarChart data={paymentBreakdown} barSize={28} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }}
+                          contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }}
+                          formatter={(v: number) => [v, "Records"]}
+                        />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                          {paymentBreakdown.map((entry, i) => (
+                            <rect key={i} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {paymentBreakdown.map(item => (
+                        <div key={item.label} className="text-center">
+                          <p className="text-base font-bold text-foreground">{item.value}</p>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Maintenance snapshot */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold">Maintenance</CardTitle>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-accent" onClick={() => navigate("/maintenance")}>View all</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {[
+                      { label: "Open", value: maintenance.filter(m => m.status === "Open").length, color: "text-accent" },
+                      { label: "In Progress", value: maintenance.filter(m => m.status === "In Progress").length, color: "text-warning" },
+                      { label: "Resolved", value: maintenance.filter(m => m.status === "Resolved").length, color: "text-success" },
+                    ].map(row => (
+                      <div key={row.label} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-muted-foreground">{row.label}</span>
+                        <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* ── Bottom Row ──────────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Recent Activity */}
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-bold">Recent Activity</CardTitle>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-accent" onClick={() => navigate("/audit-logs")}>View all →</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {auditLogs.slice(0, 6).map(log => (
+                    <div key={log.id} className="flex items-start gap-3">
+                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border ${getLogColor(log.action)}`}>
+                        {getLogIcon(log.entity)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground leading-snug">{log.action}
+                          <span className="font-normal text-muted-foreground"> · {log.entity}</span>
+                        </p>
+                        <p className="text-[9px] text-muted-foreground truncate">{log.details}</p>
+                      </div>
+                      <span className="text-[9px] text-muted-foreground/50 shrink-0 mt-0.5">{log.timestamp.slice(0, 10)}</span>
+                    </div>
+                  ))}
+                  {auditLogs.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No activity yet</p>}
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Add Boarder", icon: <Users className="h-4 w-4" />, path: "/boarders", bg: "bg-accent/5 hover:bg-accent/10 border-accent/20 text-accent", roles: ["Admin", "Staff"] },
+                      { label: "Record Payment", icon: <CreditCard className="h-4 w-4" />, path: "/payments", bg: "bg-success/5 hover:bg-success/10 border-success/20 text-success", roles: ["Admin", "Staff"] },
+                      { label: "Add Room", icon: <Building2 className="h-4 w-4" />, path: "/rooms", bg: "bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary", roles: ["Admin"] },
+                      { label: "New Expense", icon: <Receipt className="h-4 w-4" />, path: "/expenses", bg: "bg-warning/5 hover:bg-warning/10 border-warning/20 text-warning", roles: ["Admin", "Staff"] },
+                      { label: "Maintenance", icon: <Wrench className="h-4 w-4" />, path: "/maintenance", bg: "bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/20 text-orange-600", roles: ["Admin", "Staff", "Boarder"] },
+                      { label: "Reports", icon: <Download className="h-4 w-4" />, path: "/reports", bg: "bg-purple-500/5 hover:bg-purple-500/10 border-purple-500/20 text-purple-600", roles: ["Admin", "Staff"] },
+                      { label: "Audit Logs", icon: <CheckCircle2 className="h-4 w-4" />, path: "/audit-logs", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["Admin"] },
+                      { label: "Settings", icon: <Settings className="h-4 w-4" />, path: "/settings", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["Admin"] },
+                    ].filter(a => a.roles.includes(user?.role || "Boarder")).map(a => (
+                      <button
+                        key={a.label}
+                        onClick={() => navigate(a.path)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${a.bg}`}
+                      >
+                        {a.icon} {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
       </div>
     </AppLayout>

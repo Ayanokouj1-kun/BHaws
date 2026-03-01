@@ -36,7 +36,7 @@ export function AppSidebar() {
     { title: "My Profile", url: `/boarders/${user?.boarderId}`, icon: UserIcon, roles: ["Boarder"] },
     { title: "Payments", url: "/payments", icon: CreditCard },
     { title: "Maintenance", url: "/maintenance", icon: Wrench },
-    { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin"] },
+    { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin", "Staff"] },
   ].filter(item => !item.roles || item.roles.includes(role));
 
   const systemItems = [

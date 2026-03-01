@@ -69,7 +69,8 @@ type SortOrder = "newest" | "oldest";
 /* ─────────────────────────── component ─────────────────────────── */
 
 const ExpensesPage = () => {
-    const { expenses, addExpense, updateExpense, deleteExpense, payments, isLoading } = useData();
+    const { expenses, addExpense, updateExpense, deleteExpense, payments, user, isLoading } = useData();
+    const isAdmin = user?.role === "Admin";
 
     // existing filters
     const [search, setSearch] = useState("");
@@ -197,9 +198,11 @@ const ExpensesPage = () => {
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors" onClick={() => handleEdit(expense)}>
                             <Edit className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(expense.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {isAdmin && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(expense.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        )}
                     </div>
                 </TableCell>
             </TableRow>

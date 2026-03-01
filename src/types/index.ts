@@ -77,8 +77,10 @@ export interface MaintenanceRequest {
   boarderId?: string;
   title: string;
   description: string;
+  category: "Plumbing" | "Electrical" | "Structural" | "Appliance" | "Carpentry" | "Other";
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "Open" | "In Progress" | "Resolved" | "Closed";
+  images?: string[];
   createdAt: string;
   resolvedAt?: string;
 }

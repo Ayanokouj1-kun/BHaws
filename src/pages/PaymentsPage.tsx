@@ -316,11 +316,14 @@ const PaymentsPage = () => {
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent" onClick={() => handleOpenEdit(p)}>
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
 
-                      {p.status !== "Paid" && (
+                      {role !== "Boarder" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent" onClick={() => handleOpenEdit(p)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+
+                      {role !== "Boarder" && p.status !== "Paid" && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -330,7 +333,7 @@ const PaymentsPage = () => {
                               ...p,
                               status: "Paid",
                               paidDate: new Date().toISOString().split('T')[0],
-                              receivedBy: "Administrator",
+                              receivedBy: user?.fullName || "Administrator",
                               receiptNumber: p.receiptNumber || generateReceiptNumber(),
                             });
                             toast.success("Payment marked as paid");

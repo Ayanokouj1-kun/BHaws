@@ -98,23 +98,6 @@ const LoginPage = () => {
                                 Authenticate
                                 <ShieldCheck className="ml-2 h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
                             </Button>
-
-                            {/* Simplified Demo Strip */}
-                            <div className="pt-2">
-                                <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 mb-2.5">Demo Account Access</p>
-                                <div className="flex justify-center gap-1.5 px-0.5">
-                                    {["admin", "staff", "boarder"].map((role) => (
-                                        <button
-                                            key={role}
-                                            type="button"
-                                            onClick={() => { setUsername(role); setPassword(role); }}
-                                            className="flex-1 py-1.5 rounded-lg text-[9px] font-bold bg-slate-50 text-slate-400 border border-slate-100 hover:border-accent/40 hover:text-accent hover:bg-white transition-all uppercase tracking-wider capitalize"
-                                        >
-                                            {role}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
                         </form>
 
                         <div className="pt-2 border-t border-slate-100 mt-3">
