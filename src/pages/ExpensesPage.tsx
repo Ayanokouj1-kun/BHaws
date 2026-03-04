@@ -161,7 +161,8 @@ const ExpensesPage = () => {
     const toggleMonth = (ym: string) => {
         setCollapsedMonths(prev => {
             const next = new Set(prev);
-            next.has(ym) ? next.delete(ym) : next.add(ym);
+            if (next.has(ym)) next.delete(ym);
+            else next.add(ym);
             return next;
         });
     };

@@ -99,19 +99,6 @@ const LoginPage = () => {
                                 <ShieldCheck className="ml-2 h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
                             </Button>
                         </form>
-
-                        <div className="pt-2 border-t border-slate-100 mt-3">
-                            <p className="text-[10px] text-slate-400 text-center mb-1">
-                                New boarder? You can create your own access.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => navigate("/signup")}
-                                className="w-full text-[11px] font-semibold text-accent hover:text-accent/90 mt-1"
-                            >
-                                Create a boarder account
-                            </button>
-                        </div>
                     </CardContent>
                 </Card>
 

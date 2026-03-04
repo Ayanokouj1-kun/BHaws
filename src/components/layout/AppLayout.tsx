@@ -36,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const boarderPhoto = user?.role === "Boarder"
     ? boarders.find(b => b.id === user.boarderId)?.profilePhoto
     : undefined;
+  const profilePhoto = user?.profilePhoto || boarderPhoto;
 
   // ── Notifications ────────────────────────────────────────────────────────
   const notifications = [
@@ -150,8 +151,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                             key={t.id}
                             onClick={() => { setTheme(t.id); setThemeOpen(false); toast.success(`Theme changed to ${t.label}`); }}
                             className={`relative flex flex-col items-center gap-2 p-2.5 rounded-xl border-2 transition-all duration-150 hover:scale-[1.03] ${isActive
-                                ? "border-accent bg-accent/10 shadow-sm"
-                                : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40"
+                              ? "border-accent bg-accent/10 shadow-sm"
+                              : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40"
                               }`}
                           >
                             {/* Swatch preview */}
@@ -280,15 +281,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                   aria-label="Profile"
                 >
                   <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold uppercase overflow-hidden">
-                    {boarderPhoto ? (
-                      <img src={boarderPhoto} alt="Profile" className="h-full w-full object-cover" />
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
                       user?.fullName.charAt(0) || "U"
                     )}
                   </div>
                   <div className="hidden sm:block text-left">
                     <p className="text-xs font-semibold text-foreground leading-none">{user?.fullName || "User"}</p>
-                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{user?.role || "System User"}</p>
+                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5">
+                      {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "tenant")}
+                    </p>
                   </div>
                   <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -299,10 +302,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                       <p className="text-sm font-bold text-foreground">{user?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{user?.username}</p>
                       <Badge variant="outline" className={`mt-1.5 text-[9px] font-bold uppercase border-opacity-20 ${user?.role === "Admin" ? "text-accent border-accent bg-accent/5" :
-                          user?.role === "Staff" ? "text-success border-success bg-success/5" :
-                            "text-warning border-warning bg-warning/5"
+                        user?.role === "Staff" ? "text-success border-success bg-success/5" :
+                          "text-warning border-warning bg-warning/5"
                         }`}>
-                        {user?.role}
+                        {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "tenant")}
                       </Badge>
                     </div>
                     <div className="py-1.5">

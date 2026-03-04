@@ -10,6 +10,7 @@ import {
   Wrench,
   Receipt,
   User as UserIcon,
+  UserCog,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -27,19 +28,19 @@ import { useData } from "@/hooks/useData";
 
 export function AppSidebar() {
   const { user } = useData();
-  const role = user?.role || "Boarder";
+  const role = user?.role || "Staff";
 
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Rooms", url: "/rooms", icon: DoorOpen, roles: ["Admin", "Staff"] },
     { title: "Boarders", url: "/boarders", icon: Users, roles: ["Admin", "Staff"] },
-    { title: "My Profile", url: `/boarders/${user?.boarderId}`, icon: UserIcon, roles: ["Boarder"] },
     { title: "Payments", url: "/payments", icon: CreditCard },
     { title: "Maintenance", url: "/maintenance", icon: Wrench },
     { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin", "Staff"] },
   ].filter(item => !item.roles || item.roles.includes(role));
 
   const systemItems = [
+    { title: "Accounts", url: "/accounts", icon: UserCog, roles: ["Admin"] },
     { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["Admin", "Staff"] },
     { title: "Audit Logs", url: "/audit-logs", icon: ClipboardList, roles: ["Admin"] },
     { title: "Settings", url: "/settings", icon: Settings, roles: ["Admin"] },

@@ -50,6 +50,9 @@ interface DataContextType {
     deleteAnnouncement: (id: string) => Promise<void>;
     updateSettings: (newSettings: BhSettings) => Promise<void>;
     updateUserRole: (userId: string, newRole: "Admin" | "Staff" | "Boarder") => Promise<void>;
+    addUser: (profile: { username: string; fullName: string; role: "Admin" | "Staff" | "Boarder"; boarderId?: string }) => Promise<void>;
+    deleteUser: (userId: string) => Promise<void>;
+    updateProfile: (userId: string, data: { fullName?: string; email?: string; phone?: string; address?: string; profilePhoto?: string; emergencyContact?: string }) => Promise<void>;
     addLog: (action: string, entity: string, entityId: string, details: string) => Promise<void>;
     resetData: () => void;
     loadStats: () => any;
@@ -182,6 +185,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     contact: s.contact || "",
                     email: s.email || "",
                     ownerName: s.owner_name || "",
+                    website: s.website || "",
+                    taxId: s.tax_id || "",
                     currency: s.currency || "PHP",
                     lateFeeEnabled: s.late_fee_enabled !== false,
                     lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
@@ -194,7 +199,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })));
             if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
             if (annRes) setAnnouncements(annRes.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
-            if (profRes) setProfiles(profRes.map((p: any) => ({ ...p, fullName: p.full_name, boarderId: p.boarder_id })));
+            if (profRes) setProfiles(profRes.map((p: any) => {
+                // Enforce canonical roles for built-in usernames
+                let role = p.role;
+                if (p.username === "admin") role = "Admin";
+                if (p.username === "staff") role = "Staff";
+                return {
+                    ...p,
+                    role,
+                    fullName: p.full_name,
+                    boarderId: p.boarder_id,
+                    email: p.email,
+                    phone: p.phone,
+                    address: p.address,
+                    profilePhoto: p.profile_photo,
+                    emergencyContact: p.emergency_contact,
+                };
+            }));
 
             console.log("✅ BHaws: Cloud sync complete.");
         } catch (err) {
@@ -211,60 +232,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const login = async (username: string, password: string): Promise<boolean> => {
         const lc = username.toLowerCase().trim();
 
-        // 1. Check built-in mock users (Admin/Staff)
-        const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
-        if (mock) {
-            setUser(mock as any);
-            localStorage.setItem("bh_user", JSON.stringify(mock));
-            refreshData();
-            return true;
-        }
-
-        // 2. Check dynamic boarderXX login
-        const boarderMatch = lc.match(/^boarder(\d+)$/);
-        if (boarderMatch && password.toLowerCase().trim() === lc) {
-            const index = parseInt(boarderMatch[1], 10) - 1; // "boarder01" -> 0
-            if (index >= 0) {
-                // Fetch all active boarders to check sequence
-                const { data: bList } = await supabase
-                    .from("boarders")
-                    .select("*")
-                    .order("created_at", { ascending: true });
-
-                if (bList && bList[index]) {
-                    const boarder = bList[index];
-                    const u = {
-                        id: `ub-${boarder.id}`,
-                        username: lc,
-                        fullName: boarder.full_name,
-                        role: "Boarder" as const,
-                        boarderId: boarder.id
-                    };
-                    setUser(u as any);
-                    localStorage.setItem("bh_user", JSON.stringify(u));
-                    refreshData();
-                    return true;
-                }
-            }
-        }
-
-        // 3. Try Supabase profiles table (for any manually created accounts)
+        // 1. Try Supabase profiles table (preferred path for Admin/Staff)
         try {
             const { data: profile, error } = await supabase
                 .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
-                if (profile.role === "Boarder" && profile.boarder_id) {
-                    const { data: boarder } = await supabase
-                        .from("boarders")
-                        .select("status")
-                        .eq("id", profile.boarder_id)
-                        .single();
-                    if (!boarder || boarder.status !== "Active") return false;
-                }
+                if (profile.role === "Boarder") return false;
+
+                let effectiveRole = profile.role;
+                if (profile.username === "admin") effectiveRole = "Admin";
+                if (profile.username === "staff") effectiveRole = "Staff";
 
                 const u = {
                     id: profile.id, username: profile.username,
-                    fullName: profile.full_name, role: profile.role, boarderId: profile.boarder_id
+                    fullName: profile.full_name, role: effectiveRole, boarderId: profile.boarder_id,
+                    email: profile.email, phone: profile.phone, address: profile.address,
+                    profilePhoto: profile.profile_photo, emergencyContact: profile.emergency_contact,
                 };
                 setUser(u as any);
                 localStorage.setItem("bh_user", JSON.stringify(u));
@@ -273,6 +256,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (e) {
             console.warn("Profile lookup failed:", e);
+        }
+
+        // 2. Fallback: built-in mock users (only when no profile exists)
+        const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
+        if (mock) {
+            setUser(mock as any);
+            localStorage.setItem("bh_user", JSON.stringify(mock));
+            refreshData();
+            return true;
         }
 
         return false;
@@ -599,11 +591,75 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
     const updateUserRole = async (userId: string, newRole: "Admin" | "Staff" | "Boarder") => {
         if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can manage users"); return; }
+        const target = profiles.find(p => p.id === userId);
+        if (target && (target.username === "admin" || target.username === "staff")) {
+            toast.error("Cannot change role of protected system accounts.");
+            return;
+        }
         const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
         if (error) { toast.error("Failed to update user role"); return; }
         toast.success(`User role updated to ${newRole}`);
         addLog("User Role Updated", "User", userId, `Role changed to ${newRole}`);
         refreshData();
+    };
+
+    const addUser = async (profile: { username: string; fullName: string; role: "Admin" | "Staff" | "Boarder"; boarderId?: string }) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can create accounts"); return; }
+        const usernameClean = profile.username.trim().toLowerCase();
+        if (!usernameClean) { toast.error("Username is required"); return; }
+        const id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const { error } = await supabase.from("profiles").insert([{
+            id,
+            username: usernameClean,
+            full_name: profile.fullName.trim(),
+            role: profile.role,
+            boarder_id: profile.boarderId || null,
+        }]);
+        if (error) {
+            if (error.code === "23505") toast.error("That username is already taken.");
+            else toast.error("Failed to create account: " + error.message);
+            return;
+        }
+        toast.success(`Account created. Login with username "${usernameClean}" (password same as username).`);
+        addLog("Account Created", "User", id, `${profile.fullName} (${profile.role})`);
+        refreshData();
+    };
+
+    const deleteUser = async (userId: string) => {
+        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete accounts"); return; }
+        if (userId === user?.id) { toast.error("You cannot delete your own account"); return; }
+        const target = profiles.find(p => p.id === userId);
+        if (target && (target.username === "admin" || target.username === "staff")) {
+            toast.error("Cannot delete protected system accounts.");
+            return;
+        }
+        const { error } = await supabase.from("profiles").delete().eq("id", userId);
+        if (error) { toast.error("Failed to delete account"); return; }
+        toast.success("Account deleted");
+        addLog("Account Deleted", "User", userId, "User account removed.");
+        refreshData();
+    };
+
+    const updateProfile = async (userId: string, data: { fullName?: string; email?: string; phone?: string; address?: string; profilePhoto?: string; emergencyContact?: string }) => {
+        const payload: Record<string, unknown> = {};
+        if (data.fullName !== undefined) payload.full_name = data.fullName;
+        if (data.email !== undefined) payload.email = data.email;
+        if (data.phone !== undefined) payload.phone = data.phone;
+        if (data.address !== undefined) payload.address = data.address;
+        if (data.profilePhoto !== undefined) payload.profile_photo = data.profilePhoto;
+        if (data.emergencyContact !== undefined) payload.emergency_contact = data.emergencyContact;
+        if (Object.keys(payload).length === 0) return;
+        const { error } = await supabase.from("profiles").update(payload).eq("id", userId);
+        if (error) { toast.error("Failed to update profile"); return; }
+        toast.success("Profile updated");
+        addLog("Profile Updated", "User", userId, "Personal account data updated.");
+        await refreshData();
+        // Keep current session user in sync (by username) so header/My Account update immediately
+        if (user) {
+            const next = { ...user, ...data };
+            setUser(next as any);
+            localStorage.setItem("bh_user", JSON.stringify(next));
+        }
     };
 
     // --- UTILS ---
@@ -630,7 +686,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             addMaintenance, updateMaintenance, deleteMaintenance,
             addExpense, updateExpense, deleteExpense,
             addAnnouncement, deleteAnnouncement,
-            updateSettings, updateUserRole, addLog, resetData, loadStats, refreshData
+            updateSettings, updateUserRole, addUser, deleteUser, updateProfile, addLog, resetData, loadStats, refreshData
         }}>
             {children}
         </DataContext.Provider>

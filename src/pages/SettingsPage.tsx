@@ -21,7 +21,7 @@ const priorityColors: Record<string, string> = {
 };
 
 const SettingsPage = () => {
-  const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, profiles, updateUserRole, user, resetData, isLoading, rooms, boarders, payments, maintenance, expenses } = useData();
+  const { settings, updateSettings, announcements, addAnnouncement, deleteAnnouncement, resetData, isLoading, rooms, boarders, payments, maintenance, expenses } = useData();
   const [editInfo, setEditInfo] = useState<BhSettings>(settings);
   const [annDialog, setAnnDialog] = useState(false);
   const [newAnn, setNewAnn] = useState({ title: "", message: "", priority: "Normal" as Announcement["priority"] });
@@ -250,55 +250,6 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* User Management (Admin Only) */}
-        <Card className="shadow-sm border-border/60">
-          <CardHeader className="border-b border-border/40 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg"><User className="h-5 w-5 text-purple-600" /></div>
-              <div>
-                <CardTitle className="text-base">User Management</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Manage system access roles for staff and boarders.</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="space-y-3">
-              {profiles.length > 0 ? profiles.map(profile => (
-                <div key={profile.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 hover:bg-muted/10 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-accent/10 flex items-center justify-center font-bold text-accent uppercase text-xs">
-                      {profile.fullName.substring(0, 2)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{profile.fullName}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{profile.username}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Select
-                      disabled={profile.id === user?.id} // Prevent self-demotion
-                      value={profile.role}
-                      onValueChange={(val: any) => updateUserRole(profile.id, val)}
-                    >
-                      <SelectTrigger className="w-[120px] h-8 text-[11px] font-bold">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Staff">Staff</SelectItem>
-                        <SelectItem value="Boarder">Boarder</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {profile.id === user?.id && <Badge variant="outline" className="text-[9px] bg-accent/10 text-accent">You</Badge>}
-                  </div>
-                </div>
-              )) : (
-                <p className="text-xs text-muted-foreground text-center py-4 italic">No profiles found in database.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
         <Card className="shadow-sm border-border/60">
           <CardHeader className="border-b border-border/40 pb-4">
             <div className="flex items-center gap-3">

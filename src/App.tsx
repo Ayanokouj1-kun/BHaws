@@ -13,10 +13,10 @@ import PaymentsPage from "./pages/PaymentsPage";
 import ReportsPage from "./pages/ReportsPage";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import SettingsPage from "./pages/SettingsPage";
+import AccountsPage from "./pages/AccountsPage";
 import MaintenancePage from "./pages/MaintenancePage";
 import ExpensesPage from "./pages/ExpensesPage";
 import LoginPage from "./pages/LoginPage";
-import BoarderSignupPage from "./pages/BoarderSignupPage";
 import AccountPage from "./pages/AccountPage";
 import NotFound from "./pages/NotFound";
 
@@ -49,8 +49,6 @@ const App = () => (
               <Route path="/" element={<LoginPage />} />
               {/* Keep /login as an alias for backwards compatibility */}
               <Route path="/login" element={<LoginPage />} />
-              {/* Boarder self-signup */}
-              <Route path="/signup" element={<BoarderSignupPage />} />
 
               {/* Protected Routes */}
               <Route
@@ -96,6 +94,10 @@ const App = () => (
               <Route
                 path="/settings"
                 element={<ProtectedRoute allowedRoles={["Admin"]}><SettingsPage /></ProtectedRoute>}
+              />
+              <Route
+                path="/accounts"
+                element={<ProtectedRoute allowedRoles={["Admin"]}><AccountsPage /></ProtectedRoute>}
               />
               <Route
                 path="/account"

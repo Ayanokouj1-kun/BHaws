@@ -121,6 +121,12 @@ export interface User {
   fullName: string;
   role: UserRole;
   boarderId?: string; // Links to Boarder profile if role is 'Boarder'
+  /** Personalized account data (stored in profiles) */
+  email?: string;
+  phone?: string;
+  address?: string;
+  profilePhoto?: string;
+  emergencyContact?: string;
 }
 
 export interface BhSettings {
