@@ -56,7 +56,7 @@ const AccountsPage = () => {
   const [newUser, setNewUser] = useState({
     username: "",
     fullName: "",
-    role: "Staff" as "Admin" | "Staff",
+    role: "Staff" as "Admin" | "Staff" | "Boarder",
   });
 
   const getLastActivity = (fullName: string) => {
@@ -148,7 +148,7 @@ const AccountsPage = () => {
           <div>
             <h1 className="page-header">Accounts</h1>
             <p className="page-subtitle">
-              Create and monitor user accounts (Staff, Admin)
+              Create and monitor user accounts (Admin, Staff, Boarder)
             </p>
           </div>
           <Button className="gap-2" onClick={() => setCreateOpen(true)}>
@@ -237,7 +237,7 @@ const AccountsPage = () => {
                           <Select
                             value={profile.role}
                             onValueChange={(val) =>
-                              updateUserRole(profile.id, val as "Admin" | "Staff")
+                              updateUserRole(profile.id, val as "Admin" | "Staff" | "Boarder")
                             }
                             disabled={profile.id === currentUser?.id || isSuper(profile)}
                           >
@@ -248,6 +248,7 @@ const AccountsPage = () => {
                             <SelectContent>
                               <SelectItem value="Admin">Admin</SelectItem>
                               <SelectItem value="Staff">Staff</SelectItem>
+                              <SelectItem value="Boarder">Boarder</SelectItem>
                             </SelectContent>
                           </Select>
                           <Button
@@ -307,7 +308,7 @@ const AccountsPage = () => {
                 onValueChange={(v) =>
                   setNewUser({
                     ...newUser,
-                    role: v as "Admin" | "Staff",
+                    role: v as "Admin" | "Staff" | "Boarder",
                   })
                 }
               >
@@ -317,6 +318,7 @@ const AccountsPage = () => {
                 <SelectContent>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Staff">Staff</SelectItem>
+                  <SelectItem value="Boarder">Boarder</SelectItem>
                 </SelectContent>
               </Select>
             </div>
