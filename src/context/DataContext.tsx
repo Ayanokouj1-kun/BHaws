@@ -93,19 +93,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Start as FALSE so the login page shows immediately
     const [isLoading, setIsLoading] = useState(false);
 
-    // --- SESSION RECOVERY (runs once at mount, synchronously from localStorage) ---
-    useEffect(() => {
-        const saved = localStorage.getItem("bh_user");
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed?.id && parsed?.role) setUser(parsed);
-            } catch {
-                localStorage.removeItem("bh_user");
-            }
-        }
-    }, []);
-
     // --- BACKGROUND CLOUD SYNC (never blocks the UI) ---
     const refreshData = useCallback(async () => {
         try {
@@ -250,7 +237,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     profilePhoto: profile.profile_photo, emergencyContact: profile.emergency_contact,
                 };
                 setUser(u as any);
-                localStorage.setItem("bh_user", JSON.stringify(u));
                 refreshData();
                 return true;
             }
@@ -262,7 +248,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
         if (mock) {
             setUser(mock as any);
-            localStorage.setItem("bh_user", JSON.stringify(mock));
             refreshData();
             return true;
         }
@@ -273,7 +258,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- LOGOUT ---
     const logout = async () => {
         setUser(null);
-        localStorage.removeItem("bh_user");
         try { await supabase.auth.signOut(); } catch { /* ignore */ }
     };
 
@@ -654,11 +638,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         toast.success("Profile updated");
         addLog("Profile Updated", "User", userId, "Personal account data updated.");
         await refreshData();
-        // Keep current session user in sync (by username) so header/My Account update immediately
+        // Keep current session user in sync so header/My Account update immediately
         if (user) {
             const next = { ...user, ...data };
             setUser(next as any);
-            localStorage.setItem("bh_user", JSON.stringify(next));
         }
     };
 
