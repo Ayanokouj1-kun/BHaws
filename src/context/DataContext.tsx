@@ -219,16 +219,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const login = async (username: string, password: string): Promise<boolean> => {
         const lc = username.toLowerCase().trim();
 
-        // 1. Try Supabase profiles table (preferred path for Admin/Staff)
+        // 1. Try Supabase profiles table (preferred path for Admin/Staff/Boarder)
         try {
             const { data: profile, error } = await supabase
                 .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
-                if (profile.role === "Boarder") return false;
-
                 let effectiveRole = profile.role;
                 if (profile.username === "admin") effectiveRole = "Admin";
                 if (profile.username === "staff") effectiveRole = "Staff";
+
+                // If this is a Boarder profile, ensure it's linked to an active boarder
+                if (effectiveRole === "Boarder") {
+                    if (!profile.boarder_id) return false;
+                    const { data: boarder } = await supabase
+                        .from("boarders")
+                        .select("status")
+                        .eq("id", profile.boarder_id)
+                        .single();
+                    if (!boarder || boarder.status !== "Active") return false;
+                }
 
                 const u = {
                     id: profile.id, username: profile.username,

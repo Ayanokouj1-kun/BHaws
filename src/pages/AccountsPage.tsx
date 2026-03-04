@@ -43,6 +43,7 @@ import type { User as UserType } from "@/types";
 const AccountsPage = () => {
   const {
     profiles,
+    boarders,
     auditLogs,
     user: currentUser,
     addUser,
@@ -57,6 +58,7 @@ const AccountsPage = () => {
     username: "",
     fullName: "",
     role: "Staff" as "Admin" | "Staff" | "Boarder",
+    boarderId: "",
   });
 
   const getLastActivity = (fullName: string) => {
@@ -97,9 +99,10 @@ const AccountsPage = () => {
       username: usernameClean,
       fullName: newUser.fullName.trim(),
       role: newUser.role,
+      boarderId: newUser.role === "Boarder" ? newUser.boarderId || undefined : undefined,
     });
     setCreateOpen(false);
-    setNewUser({ username: "", fullName: "", role: "Staff" });
+    setNewUser({ username: "", fullName: "", role: "Staff", boarderId: "" });
   };
 
   const handleDelete = (profile: UserType) => {
@@ -309,6 +312,7 @@ const AccountsPage = () => {
                   setNewUser({
                     ...newUser,
                     role: v as "Admin" | "Staff" | "Boarder",
+                    boarderId: v !== "Boarder" ? "" : newUser.boarderId,
                   })
                 }
               >
@@ -322,6 +326,29 @@ const AccountsPage = () => {
                 </SelectContent>
               </Select>
             </div>
+            {newUser.role === "Boarder" && (
+              <div className="grid gap-2">
+                <Label>Link to Boarder *</Label>
+                <Select
+                  value={newUser.boarderId}
+                  onValueChange={(v) => setNewUser({ ...newUser, boarderId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a boarder..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {boarders
+                      .filter((b) => b.status === "Active")
+                      .map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.fullName}
+                          {b.email ? ` (${b.email})` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
