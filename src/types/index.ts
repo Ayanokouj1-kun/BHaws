@@ -141,4 +141,6 @@ export interface BhSettings {
   lateFeeEnabled?: boolean;
   lateFeeAmount?: number;
   gracePeriodDays?: number;
+  gcashNumber?: string;
+  gcashQRCode?: string;
 }

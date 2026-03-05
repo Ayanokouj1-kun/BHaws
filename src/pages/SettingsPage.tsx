@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2, AlertCircle, Download, Upload, Database } from "lucide-react";
+import { Building2, Save, User, Mail, Phone, Globe, ShieldCheck, BellRing, Plus, Trash2, AlertCircle, Download, Upload, Database, Smartphone, QrCode, Image as ImageIcon, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Announcement, BhSettings } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,12 +80,29 @@ const SettingsPage = () => {
     e.target.value = ""; // Reset input
   };
 
-  const handleAddAnn = () => {
+  const handleQRCodeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File is too large (max 2MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setEditInfo({ ...editInfo, gcashQRCode: event.target?.result as string });
+      toast.success("QR Code uploaded!");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddAnn = async () => {
     if (!newAnn.title || !newAnn.message) { toast.error("Fill all fields"); return; }
-    addAnnouncement({ ...newAnn, id: `an${Date.now()}`, createdAt: new Date().toISOString().split("T")[0] });
-    toast.success("Announcement posted");
-    setAnnDialog(false);
-    setNewAnn({ title: "", message: "", priority: "Normal" });
+    const success = await addAnnouncement({ ...newAnn, id: `an${Date.now()}`, createdAt: new Date().toISOString().split("T")[0] });
+    if (success) {
+      toast.success("Announcement posted");
+      setAnnDialog(false);
+      setNewAnn({ title: "", message: "", priority: "Normal" });
+    }
   };
 
   if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
@@ -93,25 +110,9 @@ const SettingsPage = () => {
   return (
     <AppLayout>
       <div className="animate-fade-in space-y-6 max-w-3xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="page-header">Settings</h1>
-            <p className="page-subtitle">Manage your boarding house configuration and preferences</p>
-          </div>
-          <Button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="gap-2 shadow-sm"
-          >
-            {isSaving ? (
-              <span className="flex items-center gap-2">
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving...
-              </span>
-            ) : (
-              <><Save className="h-4 w-4" /> Save Changes</>
-            )}
-          </Button>
+        <div>
+          <h1 className="page-header">Settings</h1>
+          <p className="page-subtitle">Manage your boarding house configuration and preferences</p>
         </div>
 
         {/* Boarding House Information */}
@@ -210,6 +211,109 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
+        {/* GCash Settings */}
+        <Card className="shadow-sm border-border/60">
+          <CardHeader className="border-b border-border/40 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg"><Smartphone className="h-5 w-5 text-blue-600" /></div>
+              <div>
+                <CardTitle className="text-base">GCash Payment Details</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">Configure your GCash account for online tenant payments.</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" /> GCash Number
+                </Label>
+                <Input
+                  value={editInfo.gcashNumber || ""}
+                  onChange={e => setEditInfo({ ...editInfo, gcashNumber: e.target.value })}
+                  placeholder="e.g., 09171234567"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <QrCode className="h-3.5 w-3.5" /> GCash QR Code (Photo)
+              </Label>
+
+              <div className="flex flex-col sm:flex-row gap-6 items-start">
+                <div className="relative group shrink-0">
+                  <div className="h-48 w-48 rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-blue-500/50">
+                    {editInfo.gcashQRCode ? (
+                      <>
+                        <img src={editInfo.gcashQRCode} alt="GCash QR" className="h-full w-full object-contain" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
+                            onClick={() => setEditInfo({ ...editInfo, gcashQRCode: "" })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground text-center px-4">
+                        <ImageIcon className="h-8 w-8 opacity-20" />
+                        <p className="text-[10px] font-medium leading-tight">No QR code uploaded yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  <div className="p-4 rounded-xl bg-blue-50 text-blue-700 border border-blue-100">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold">Important Note</p>
+                        <p className="text-[10px] leading-relaxed opacity-90">
+                          This photo will be displayed to all boarders when they click "Pay Online".
+                          Make sure your QR code is clear and shows your registered GCash name.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      id="gcash-qr-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleQRCodeUpload}
+                    />
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => document.getElementById("gcash-qr-upload")?.click()}
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {editInfo.gcashQRCode ? "Change Photo" : "Upload QR Photo"}
+                    </Button>
+                    {editInfo.gcashQRCode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive font-medium h-9"
+                        onClick={() => setEditInfo({ ...editInfo, gcashQRCode: "" })}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Announcements */}
         <Card className="shadow-sm border-border/60">
           <CardHeader className="border-b border-border/40 pb-4">
@@ -293,15 +397,26 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Floating Save Button for Mobile/Long scrolls */}
-        <div className="flex justify-end pt-4 pb-10">
+        {/* Save Footer */}
+        <div className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border/60 bg-muted/30 shadow-sm mb-10">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Save className="h-4 w-4 shrink-0" />
+            <span>Changes will be saved to the cloud immediately.</span>
+          </div>
           <Button
             onClick={handleSaveSettings}
             disabled={isSaving}
             size="lg"
-            className="gap-2 px-8 shadow-lg"
+            className="gap-2 px-8 shadow-md shrink-0"
           >
-            {isSaving ? "Saving Changes..." : "Save All Settings"}
+            {isSaving ? (
+              <span className="flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              <><Save className="h-4 w-4" /> Save All Settings</>
+            )}
           </Button>
         </div>
       </div>

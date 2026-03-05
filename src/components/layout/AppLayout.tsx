@@ -1,33 +1,42 @@
 import { ReactNode, useState, useRef, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { Bell, Search, LogOut, User, ChevronDown, CheckCheck, Palette, Check } from "lucide-react";
+import { Bell, Search, LogOut, User, ChevronDown, CheckCheck, Palette, Check, Megaphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useTheme, THEMES } from "@/context/ThemeContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Announcement } from "@/types";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { payments, maintenance, announcements, settings, boarders, user, logout } = useData();
+  const { payments, maintenance, announcements, boarders, user, logout } = useData();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [selectedAnn, setSelectedAnn] = useState<any>(null);
+  const [annModalOpen, setAnnModalOpen] = useState(false);
 
-  const [readNotifs, setReadNotifs] = useState<string[]>(() => {
+  const [readNotifs, setReadNotifs] = useState<string[]>([]);
+
+  // ── Scoped notification state ──────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
     try {
-      const saved = localStorage.getItem("bhaws_read_notifications");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+      const saved = localStorage.getItem(`bhaws_read_notifs_${user.id}`);
+      setReadNotifs(saved ? JSON.parse(saved) : []);
+    } catch { setReadNotifs([]); }
+  }, [user?.id]);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -38,34 +47,70 @@ export function AppLayout({ children }: AppLayoutProps) {
     : undefined;
   const profilePhoto = user?.profilePhoto || boarderPhoto;
 
-  // ── Notifications ────────────────────────────────────────────────────────
-  const notifications = [
-    ...payments
-      .filter(p => p.status === "Overdue")
-      .map(p => ({ id: `pay-${p.id}`, type: "overdue", message: `Payment overdue: ${p.receiptNumber || p.id} (₱${p.amount.toLocaleString()})`, time: p.date || "" })),
-    ...payments
-      .filter(p => p.status === "Pending")
-      .slice(0, 3)
-      .map(p => ({ id: `pend-${p.id}`, type: "pending", message: `Pending payment: ₱${p.amount.toLocaleString()} for ${p.month || "—"}`, time: p.date || "" })),
-    ...maintenance
-      .filter(m => (m.status === "Open" || m.status === "In Progress") && m.priority === "Urgent")
-      .map(m => ({ id: `maint-${m.id}`, type: "urgent", message: `Urgent maintenance: ${m.title}`, time: m.createdAt })),
-    ...announcements
-      .filter(a => {
-        const days = Math.ceil(Math.abs(new Date().getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-        return days <= 7;
-      })
-      .slice(0, 3)
-      .map(a => ({ id: `ann-${a.id}`, type: "announce", message: a.title, time: a.createdAt })),
-  ].slice(0, 8);
+  const isBoarder = user?.role === "Boarder";
+  const isAdminOrStaff = user?.role === "Admin" || user?.role === "Staff";
 
-  const unreadCount = notifications.filter(n => !readNotifs.includes(n.id)).length;
+  // ── Notifications (role-aware) ───────────────────────────────────────────
+
+  // Announcements — visible to ALL roles, sorted newest first
+  const myPosts = JSON.parse(localStorage.getItem("bhaws_my_recent_announcements") || "[]");
+
+  const annNotifs = [...announcements]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+    .map(a => ({
+      id: `ann-${a.id}`,
+      realId: a.id,
+      type: "announce" as const,
+      priority: a.priority,
+      message: a.title,
+      detail: a.message,
+      time: a.createdAt,
+      isNew: Math.abs(new Date().getTime() - new Date(a.createdAt).getTime()) < 60 * 60 * 1000, // < 1 hr
+      isMine: myPosts.includes(a.id),
+    }));
+
+  // Payment / maintenance notifs — Admin & Staff see all; Boarders see only their own
+  const paymentNotifs = isAdminOrStaff
+    ? [
+      ...payments
+        .filter(p => p.status === "Overdue")
+        .map(p => ({ id: `pay-${p.id}`, type: "overdue" as const, priority: "Urgent", message: `Overdue: ${p.receiptNumber || p.id} (₱${p.amount.toLocaleString()})`, detail: "", time: p.date || "", isNew: false })),
+      ...payments
+        .filter(p => p.status === "Pending")
+        .slice(0, 3)
+        .map(p => ({ id: `pend-${p.id}`, type: "pending" as const, priority: "Normal", message: `Pending: ₱${p.amount.toLocaleString()} for ${p.month || "—"}`, detail: "", time: p.date || "", isNew: false })),
+      ...maintenance
+        .filter(m => (m.status === "Open" || m.status === "In Progress") && m.priority === "Urgent")
+        .map(m => ({ id: `maint-${m.id}`, type: "urgent" as const, priority: "Urgent", message: `Urgent maintenance: ${m.title}`, detail: "", time: m.createdAt, isNew: false })),
+    ]
+    : payments
+      .filter(p => p.boarderId === user?.boarderId && (p.status === "Overdue" || p.status === "Pending"))
+      .map(p => ({
+        id: `pay-${p.id}`,
+        type: (p.status === "Overdue" ? "overdue" : "pending") as "overdue" | "pending",
+        priority: p.status === "Overdue" ? "Urgent" : "Normal",
+        message: p.status === "Overdue"
+          ? `Your payment of ₱${p.amount.toLocaleString()} is overdue`
+          : `Payment due: ₱${p.amount.toLocaleString()} for ${p.month || "—"}`,
+        detail: "",
+        time: p.date || "",
+        isNew: false,
+      }));
+
+  // Merge: announcements first, then payment/maintenance alerts
+  const notifications = [...annNotifs, ...paymentNotifs].slice(0, 10);
+  const unreadCount = notifications.filter(n => {
+    // Exempt creator from their own post badges
+    if (n.type === "announce" && (n as any).isMine) return false;
+    return !readNotifs.includes(n.id);
+  }).length;
 
   const notifColors: Record<string, string> = {
-    overdue: "bg-destructive/10 text-destructive",
-    pending: "bg-warning/10 text-warning",
-    urgent: "bg-orange-500/10 text-orange-600",
-    announce: "bg-accent/10 text-accent",
+    overdue: "bg-destructive/10 text-destructive border-destructive/20",
+    pending: "bg-warning/10 text-warning border-warning/20",
+    urgent: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    announce: "bg-accent/10 text-accent border-accent/20",
   };
   const notifLabels: Record<string, string> = {
     overdue: "Overdue", pending: "Due", urgent: "Urgent", announce: "Notice",
@@ -83,9 +128,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   const markAllRead = () => {
+    if (!user?.id) return;
     const allIds = notifications.map(n => n.id);
     setReadNotifs(allIds);
-    localStorage.setItem("bhaws_read_notifications", JSON.stringify(allIds));
+    localStorage.setItem(`bhaws_read_notifs_${user.id}`, JSON.stringify(allIds));
     toast.success("All notifications marked as read");
   };
 
@@ -208,18 +254,25 @@ export function AppLayout({ children }: AppLayoutProps) {
                 >
                   <Bell className="h-4.5 w-4.5 text-muted-foreground" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive flex items-center justify-center text-[9px] font-bold text-white leading-none">
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive flex items-center justify-center text-[9px] font-bold text-white leading-none animate-pulse">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
 
                 {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-card rounded-xl border border-border shadow-xl z-50 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                      <div>
-                        <p className="text-sm font-bold text-foreground">Notifications</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{unreadCount} unread</p>
+                  <div className="absolute right-0 top-full mt-2 bg-card rounded-xl border border-border shadow-xl z-50 overflow-hidden animate-fade-in" style={{ width: "22rem" }}>
+
+                    {/* Panel header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/20">
+                      <div className="flex items-center gap-2">
+                        <Bell className="h-4 w-4 text-accent" />
+                        <div>
+                          <p className="text-sm font-bold text-foreground">Notifications</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+                          </p>
+                        </div>
                       </div>
                       {unreadCount > 0 && (
                         <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-accent hover:underline">
@@ -227,33 +280,68 @@ export function AppLayout({ children }: AppLayoutProps) {
                         </button>
                       )}
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-border/40">
+
+                    {/* Announcement banner (if any unread announcements) */}
+                    {annNotifs.filter(n => !readNotifs.includes(n.id)).length > 0 && (
+                      <div className="px-4 py-2 bg-accent/5 border-b border-accent/10 flex items-center gap-2">
+                        <Megaphone className="h-3.5 w-3.5 text-accent shrink-0" />
+                        <p className="text-[10px] font-bold text-accent uppercase tracking-wider">
+                          {annNotifs.filter(n => !readNotifs.includes(n.id)).length} new announcement{annNotifs.filter(n => !readNotifs.includes(n.id)).length > 1 ? "s" : ""}
+                        </p>
+                        <span className="ml-auto h-2 w-2 rounded-full bg-accent animate-pulse shrink-0" />
+                      </div>
+                    )}
+
+                    {/* Notification list */}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-border/40">
                       {notifications.length === 0 ? (
-                        <div className="py-10 text-center text-sm text-muted-foreground">
+                        <div className="py-12 text-center text-sm text-muted-foreground">
                           <Bell className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                          All caught up!
+                          <p className="font-medium">You're all caught up!</p>
+                          <p className="text-[10px] mt-1 opacity-60">No new notifications right now</p>
                         </div>
                       ) : (
                         notifications.map(n => {
                           const isRead = readNotifs.includes(n.id);
+                          const markRead = () => {
+                            if (!isRead && user?.id) {
+                              const updated = [...readNotifs, n.id];
+                              setReadNotifs(updated);
+                              localStorage.setItem(`bhaws_read_notifs_${user.id}`, JSON.stringify(updated));
+                            }
+                          };
                           return (
                             <div
                               key={n.id}
                               onClick={() => {
-                                if (!isRead) {
-                                  const updated = [...readNotifs, n.id];
-                                  setReadNotifs(updated);
-                                  localStorage.setItem("bhaws_read_notifications", JSON.stringify(updated));
+                                markRead();
+                                if (n.type === "announce") {
+                                  setSelectedAnn(n);
+                                  setAnnModalOpen(true);
                                 }
+                                else navigate("/payments");
+                                setNotifOpen(false);
                               }}
                               className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer ${!isRead ? "bg-accent/5" : ""}`}
                             >
-                              <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${notifColors[n.type]}`}>
+                              {/* Type badge */}
+                              <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase ${notifColors[n.type]}`}>
                                 {notifLabels[n.type]}
                               </span>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-foreground leading-snug">{n.message}</p>
-                                {n.time && <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>}
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-semibold text-foreground leading-snug truncate">{n.message}</p>
+                                  {/* Pulse dot for brand-new announcements (< 1 hr) */}
+                                  {n.type === "announce" && (n as any).isNew && (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[8px] font-black uppercase tracking-wide animate-pulse">
+                                      New
+                                    </span>
+                                  )}
+                                </div>
+                                {(n as any).detail && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{(n as any).detail}</p>
+                                )}
+                                {n.time && <p className="text-[9px] text-muted-foreground/60 mt-0.5">{n.time.slice(0, 10)}</p>}
                               </div>
                               {!isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-accent shrink-0" />}
                             </div>
@@ -261,13 +349,23 @@ export function AppLayout({ children }: AppLayoutProps) {
                         })
                       )}
                     </div>
-                    <div className="px-4 py-2.5 border-t border-border/60">
+
+                    {/* Footer */}
+                    <div className="px-4 py-2.5 border-t border-border/60 flex items-center justify-between">
                       <button
-                        onClick={() => { navigate("/payments"); setNotifOpen(false); }}
-                        className="text-xs text-accent hover:underline w-full text-center"
+                        onClick={() => { navigate(isBoarder ? "/dashboard" : "/payments"); setNotifOpen(false); }}
+                        className="text-xs text-accent hover:underline"
                       >
-                        View all payment records →
+                        {isBoarder ? "View my dashboard →" : "View all payments →"}
                       </button>
+                      {isAdminOrStaff && (
+                        <button
+                          onClick={() => { navigate("/settings"); setNotifOpen(false); }}
+                          className="text-xs text-muted-foreground hover:text-accent transition-colors"
+                        >
+                          Post announcement
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -331,13 +429,37 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
 
-          {/* ── Page Content ───────────────────────────────────────────── */}
+          {/* Page Content */}
           <main className="flex-1 p-6 overflow-auto">
             {children}
           </main>
 
         </div>
       </div>
+
+      {/* Announcement Modal */}
+      <Dialog open={annModalOpen} onOpenChange={setAnnModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className={`text-[10px] font-bold uppercase ${selectedAnn?.priority === "Urgent" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                selectedAnn?.priority === "Important" ? "bg-warning/10 text-warning border-warning/20" :
+                  "bg-muted text-muted-foreground border-border"
+                }`}>
+                {selectedAnn?.priority}
+              </Badge>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{selectedAnn?.time?.slice(0, 10)}</span>
+            </div>
+            <DialogTitle className="text-xl font-bold">{selectedAnn?.message}</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed pt-2 text-foreground/80 whitespace-pre-wrap">
+              {selectedAnn?.detail}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setAnnModalOpen(false)} className="w-full sm:w-auto">Dismiss</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

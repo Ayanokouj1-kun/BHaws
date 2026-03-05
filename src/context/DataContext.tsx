@@ -46,7 +46,7 @@ interface DataContextType {
     addExpense: (expense: Expense) => Promise<void>;
     updateExpense: (expense: Expense) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
-    addAnnouncement: (ann: Announcement) => Promise<void>;
+    addAnnouncement: (ann: Announcement) => Promise<boolean>;
     deleteAnnouncement: (id: string) => Promise<void>;
     updateSettings: (newSettings: BhSettings) => Promise<void>;
     updateUserRole: (userId: string, newRole: "Admin" | "Staff" | "Boarder") => Promise<void>;
@@ -177,7 +177,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     currency: s.currency || "PHP",
                     lateFeeEnabled: s.late_fee_enabled !== false,
                     lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
-                    gracePeriodDays: s.grace_period_days || 0
+                    gracePeriodDays: s.grace_period_days || 0,
+                    gcashNumber: s.gcash_number || localStorage.getItem("bhaws_fallback_gcash_number") || "",
+                    gcashQRCode: s.gcash_qr_code || localStorage.getItem("bhaws_fallback_gcash_qr") || ""
                 });
             }
 
@@ -213,6 +215,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Kick off cloud sync in background after mount
     useEffect(() => {
         refreshData();
+    }, [refreshData]);
+
+    // ── Supabase Realtime subscriptions (all users stay in sync) ─────────────
+    useEffect(() => {
+        const channel = supabase
+            .channel("bhaws-realtime")
+            // Announcements — notify all users on INSERT
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "announcements" }, (payload) => {
+                const a = payload.new as any;
+                const ann = { ...a, createdAt: a.created_at, expiresAt: a.expires_at };
+
+                setAnnouncements(prev => {
+                    if (prev.find(x => x.id === ann.id)) return prev;
+                    return [ann, ...prev];
+                });
+
+                // Check if this was created by ME (using local storage tracking)
+                const myPosts = JSON.parse(localStorage.getItem("bhaws_my_recent_announcements") || "[]");
+                if (myPosts.includes(a.id)) return;
+
+                // Show live toast for all OTHER users
+                toast.info(`📢 New Announcement: ${a.title}`, {
+                    description: a.message,
+                    duration: 6000,
+                });
+            })
+            .on("postgres_changes", { event: "DELETE", schema: "public", table: "announcements" }, (payload) => {
+                setAnnouncements(prev => prev.filter(a => a.id !== payload.old.id));
+            })
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "announcements" }, () => {
+                refreshData();
+            })
+            // Payments — refresh on any change
+            .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
+                refreshData();
+            })
+            // Maintenance — refresh on any change
+            .on("postgres_changes", { event: "*", schema: "public", table: "maintenance_requests" }, () => {
+                refreshData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [refreshData]);
 
     // --- LOGIN ---
@@ -535,13 +582,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // --- ANNOUNCEMENTS ---
-    const addAnnouncement = async (ann: Announcement) => {
-        if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
-        await supabase.from("announcements").insert([{
-            title: ann.title, message: ann.message, priority: ann.priority, expires_at: ann.expiresAt
-        }]);
+    const addAnnouncement = async (ann: Announcement): Promise<boolean> => {
+        if (user?.role === "Boarder") { toast.error("Unauthorized"); return false; }
+        const { data, error } = await supabase.from("announcements").insert([{
+            title: ann.title,
+            message: ann.message,
+            priority: ann.priority,
+            expires_at: ann.expiresAt
+        }]).select();
+
+        if (error) {
+            console.error("Supabase Announcement Error:", error);
+            toast.error(`Error: ${error.message}`);
+            return false;
+        }
+
+        // Save ID locally so we know we created it (to exempt ourselves from badges/toasts)
+        if (data && data[0]) {
+            try {
+                const myPosts = JSON.parse(localStorage.getItem("bhaws_my_recent_announcements") || "[]");
+                myPosts.push(data[0].id);
+                localStorage.setItem("bhaws_my_recent_announcements", JSON.stringify(myPosts.slice(-20))); // Keep last 20
+            } catch (e) { console.error("Filter Save Error:", e); }
+        }
+
         addLog("Announcement Posted", "Announcement", ann.id, `New announcement: ${ann.title}`);
         refreshData();
+        return true;
     };
 
     const deleteAnnouncement = async (id: string) => {
@@ -556,7 +623,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can modify system settings"); return; }
         try {
             setIsLoading(true);
-            const { error } = await supabase.from("settings").update({
+            const updatePayload: any = {
                 name: newSettings.name,
                 address: newSettings.address,
                 contact: newSettings.contact,
@@ -567,12 +634,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 currency: newSettings.currency,
                 late_fee_enabled: newSettings.lateFeeEnabled,
                 late_fee_amount: newSettings.lateFeeAmount,
-                grace_period_days: newSettings.gracePeriodDays
-            }).eq("id", 1);
+                grace_period_days: newSettings.gracePeriodDays,
+                gcash_number: newSettings.gcashNumber,
+                gcash_qr_code: newSettings.gcashQRCode
+            };
 
-            if (error) throw error;
+            const { error: fullError } = await supabase.from("settings").update(updatePayload).eq("id", 1);
 
-            toast.success("Settings saved successfully");
+            if (fullError && (fullError.message?.includes("column") || fullError.code === "PGRST204")) {
+                console.warn("DB Schema mismatch: GCash columns missing. Falling back...");
+
+                const fallbackPayload = { ...updatePayload };
+                delete fallbackPayload.gcash_number;
+                delete fallbackPayload.gcash_qr_code;
+
+                const { error: partialError } = await supabase.from("settings").update(fallbackPayload).eq("id", 1);
+
+                if (partialError) throw partialError;
+
+                // Save to local storage as emergency backup
+                localStorage.setItem("bhaws_fallback_gcash_number", newSettings.gcashNumber || "");
+                localStorage.setItem("bhaws_fallback_gcash_qr", newSettings.gcashQRCode || "");
+
+                toast.info("Settings saved, but GCash requires a database update.");
+            } else if (fullError) {
+                throw fullError;
+            } else {
+                toast.success("Settings saved successfully");
+            }
+
             addLog("Settings Updated", "Settings", "1", "System global settings were updated.");
             await refreshData();
         } catch (error: any) {

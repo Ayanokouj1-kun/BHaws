@@ -1,7 +1,7 @@
 import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
-import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, DollarSign, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, PhilippinePeso, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -243,7 +243,7 @@ const ReportsPage = () => {
                     <p className="text-[10px] font-black text-accent/80 uppercase tracking-widest mb-2">Total Collections</p>
                     <p className="text-4xl font-extrabold text-foreground">₱{paidPayments.reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-accent/10"><DollarSign className="h-8 w-8 text-accent" /></div>
+                  <div className="p-4 rounded-2xl bg-accent/10"><PhilippinePeso className="h-8 w-8 text-accent" /></div>
                 </div>
                 <div className="p-8 rounded-3xl bg-success/5 border border-success/10 flex items-center justify-between">
                   <div>

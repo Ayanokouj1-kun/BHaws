@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import {
-  Users, Building2, DollarSign, TrendingUp, TrendingDown,
+  Users, Building2, PhilippinePeso, TrendingUp, TrendingDown,
   Home, CreditCard, Settings, Clock, User as UserIcon,
   Wrench, AlertCircle, CheckCircle2, Receipt, Bell, Plus,
-  Download, ArrowUpRight, ArrowDownRight,
+  Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2
 } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import {
@@ -16,6 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useState as useReactState } from "react";
 
 // Month sort order
 const MONTH_ORDER = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -24,8 +27,11 @@ const fmt = (n: number) =>
   n >= 1000 ? `₱${(n / 1000).toFixed(1)}k` : `₱${n}`;
 
 const Dashboard = () => {
-  const { rooms, boarders, payments, auditLogs, maintenance, expenses, announcements, user, isLoading } = useData();
+  const { rooms, boarders, payments, auditLogs, maintenance, expenses, announcements, settings, user, isLoading } = useData();
   const navigate = useNavigate();
+  const [payModalOpen, setPayModalOpen] = useReactState(false);
+  const [qrZoomed, setQrZoomed] = useReactState(false);
+  const [copied, setCopied] = useReactState(false);
 
   const isAdmin = user?.role === "Admin";
   const isStaff = user?.role === "Staff";
@@ -215,8 +221,8 @@ const Dashboard = () => {
                   <CardTitle className="text-sm font-bold">Quick Links</CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-2">
-                  <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => navigate("/maintenance")}>
-                    <Wrench className="h-4 w-4 text-orange-500" /> Request Maintenance
+                  <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => setPayModalOpen(true)}>
+                    <Smartphone className="h-4 w-4 text-blue-500" /> Pay via GCash
                   </Button>
                   <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => navigate("/payments")}>
                     <Receipt className="h-4 w-4 text-success" /> View My Payments
@@ -311,7 +317,7 @@ const Dashboard = () => {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
                     <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                      <DollarSign className="h-5 w-5 text-primary" />
+                      <PhilippinePeso className="h-5 w-5 text-primary" />
                     </div>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${stats.overdueCount > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
                       {stats.overdueCount > 0 ? `${stats.overdueCount} overdue` : "All clear"}
@@ -517,6 +523,124 @@ const Dashboard = () => {
         )}
 
       </div>
+      {/* GCash Payment Modal — Refined Small & Informative Version */}
+      <Dialog open={payModalOpen} onOpenChange={setPayModalOpen}>
+        <DialogContent className="max-w-[320px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-card">
+          <div className="p-5 space-y-5">
+            {/* Minimal Header */}
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
+                <Smartphone className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-bold text-foreground">GCash Payment</DialogTitle>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{settings.name || "BHaws Residences"}</p>
+              </div>
+            </div>
+
+            {/* QR Section */}
+            <div className="bg-muted/30 rounded-2xl p-4 border border-border/40 space-y-4">
+              <div
+                className="aspect-square w-40 mx-auto bg-white rounded-xl shadow-inner border border-border/20 p-2 relative group cursor-zoom-in active:scale-95 transition-transform"
+                onClick={() => settings.gcashQRCode && setQrZoomed(true)}
+              >
+                {settings.gcashQRCode ? (
+                  <>
+                    <img src={settings.gcashQRCode} alt="QR" className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+                      <Maximize2 className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground/30 gap-1">
+                    <QrCode className="h-8 w-8" />
+                    <span className="text-[8px] font-bold uppercase">No QR</span>
+                  </div>
+                )}
+              </div>
+
+              {settings.gcashQRCode && (
+                <p className="text-[9px] text-center text-blue-600/60 font-medium animate-pulse">Tap QR to enlarge for scanning</p>
+              )}
+
+              {/* Number Section */}
+              <div className="text-center space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Account Number</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-bold font-mono tracking-tight text-foreground select-all">
+                    {settings.gcashNumber || "09XX XXX XXXX"}
+                  </span>
+                  {settings.gcashNumber && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-lg hover:bg-blue-600/10 hover:text-blue-600"
+                      onClick={() => {
+                        navigator.clipboard.writeText(settings.gcashNumber!);
+                        setCopied(true);
+                        toast.success("Number copied");
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Hint */}
+            <div className="flex gap-2.5 p-3 rounded-xl bg-blue-50/50 border border-blue-100/50">
+              <AlertCircle className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-[10px] leading-relaxed text-blue-700 font-medium">
+                Save the receipt and send it to your administrator for verification.
+              </p>
+            </div>
+
+            <Button
+              className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+              onClick={() => setPayModalOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+
+          {/* Smart Zoom / Full Scan Feature */}
+          {qrZoomed && (
+            <div
+              className="absolute inset-0 bg-white z-50 animate-in fade-in zoom-in duration-200 flex flex-col items-center justify-center p-6"
+              onClick={() => setQrZoomed(false)}
+            >
+              <div className="w-full max-w-[280px] bg-white rounded-3xl p-4 shadow-2xl border border-border/40">
+                <div className="flex items-center justify-between mb-4 border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <QrCode className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Fast Scan Mode</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setQrZoomed(false)}>
+                    <Plus className="h-3.5 w-3.5 rotate-45" />
+                  </Button>
+                </div>
+                <div className="aspect-square w-full">
+                  <img src={settings.gcashQRCode} alt="Zoomed QR" className="w-full h-full object-contain" />
+                </div>
+                <p className="text-[10px] text-center text-muted-foreground mt-4 font-medium italic">
+                  Aim your phone camera at the screen to scan.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="mt-6 rounded-full px-6 text-xs border-blue-200 text-blue-600"
+                onClick={() => setQrZoomed(false)}
+              >
+                Back to Details
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
