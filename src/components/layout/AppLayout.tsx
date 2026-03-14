@@ -27,15 +27,29 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [selectedAnn, setSelectedAnn] = useState<any>(null);
   const [annModalOpen, setAnnModalOpen] = useState(false);
 
-  const [readNotifs, setReadNotifs] = useState<string[]>([]);
+  const [readNotifs, setReadNotifs] = useState<string[]>(() => {
+    if (!user?.id) return [];
+    try {
+      const saved = localStorage.getItem(`bhaws_read_notifs_${user.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // ── Scoped notification state ──────────────────────────────────────────
+  // The effect syncing isn't strictly necessary for init anymore,
+  // but we keep it to listen to changes if needed across components or tabs.
   useEffect(() => {
     if (!user?.id) return;
     try {
       const saved = localStorage.getItem(`bhaws_read_notifs_${user.id}`);
-      setReadNotifs(saved ? JSON.parse(saved) : []);
-    } catch { setReadNotifs([]); }
+      const parsed = saved ? JSON.parse(saved) : [];
+      // Only set if different to avoid re-renders
+      if (JSON.stringify(parsed) !== JSON.stringify(readNotifs)) {
+        setReadNotifs(parsed);
+      }
+    } catch { /* ignore */ }
   }, [user?.id]);
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -388,7 +402,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <div className="hidden sm:block text-left">
                     <p className="text-xs font-semibold text-foreground leading-none">{user?.fullName || "User"}</p>
                     <p className="text-[10px] text-muted-foreground leading-none mt-0.5">
-                      {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "tenant")}
+                      {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder")}
                     </p>
                   </div>
                   <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
@@ -403,7 +417,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         user?.role === "Staff" ? "text-success border-success bg-success/5" :
                           "text-warning border-warning bg-warning/5"
                         }`}>
-                        {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "tenant")}
+                        {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder")}
                       </Badge>
                     </div>
                     <div className="py-1.5">

@@ -29,8 +29,7 @@ export const generatePDF = (config: ExportConfig) => {
     doc.setTextColor(150);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 38);
 
-    // Generate Table
-    (doc as any).autoTable({
+    autoTable(doc, {
         head: [config.headers],
         body: config.data,
         startY: 45,

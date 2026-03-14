@@ -53,17 +53,20 @@ const AuditLogsPage = () => {
       log.performedBy
     ]);
 
+    const dateStr = new Date().toISOString().split('T')[0];
+    const formalFileName = `BHaws_Audit_Logs_${dateStr}`;
+
     if (format === "PDF") {
       generatePDF({
         title: `${settings.name} - System Audit Logs`,
         subtitle: `Generated on ${new Date().toLocaleString()}`,
         headers,
         data,
-        fileName: `audit_logs_${Date.now()}`
+        fileName: formalFileName
       });
       toast.success("Audit logs generated as PDF");
     } else {
-      generateCSV(headers, data, `audit_logs_${Date.now()}`);
+      generateCSV(headers, data, formalFileName);
       toast.success("Audit logs exported as CSV");
     }
   };

@@ -48,10 +48,14 @@ const ReportsPage = () => {
   const unpaidPayments = useMemo(() => payments.filter(p => p.status === "Overdue" || p.status === "Pending"), [payments]);
 
   const handleExport = (format: string) => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const formattedActive = active.charAt(0).toUpperCase() + active.slice(1);
+    const formalFileName = `BHaws_${formattedActive}_Report_${dateStr}`;
+
     const reportConfig: { headers: string[]; data: (string | number)[][]; fileName: string; title: string; subtitle: string } = {
       headers: [],
       data: [],
-      fileName: `${active}_report_${Date.now()}`,
+      fileName: formalFileName,
       title: `${settings.name} - ${active.toUpperCase()} REPORT`,
       subtitle: `Address: ${settings.address} | Contact: ${settings.contact}`,
     };

@@ -339,12 +339,16 @@ const AccountsPage = () => {
                   <SelectContent>
                     {boarders
                       .filter((b) => b.status === "Active")
-                      .map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.fullName}
-                          {b.email ? ` (${b.email})` : ""}
-                        </SelectItem>
-                      ))}
+                      .map((b) => {
+                        const isLinked = profiles.some((p) => p.boarderId === b.id);
+                        return (
+                          <SelectItem key={b.id} value={b.id} disabled={isLinked}>
+                            {b.fullName}
+                            {b.email ? ` (${b.email})` : ""}
+                            {isLinked ? " (Already linked)" : ""}
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>

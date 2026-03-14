@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   Users, Building2, PhilippinePeso, TrendingUp, TrendingDown,
   Home, CreditCard, Settings, Clock, User as UserIcon,
@@ -32,6 +32,13 @@ const Dashboard = () => {
   const [payModalOpen, setPayModalOpen] = useReactState(false);
   const [qrZoomed, setQrZoomed] = useReactState(false);
   const [copied, setCopied] = useReactState(false);
+
+  useEffect(() => {
+    document.title = "BHaws Management and Monitoring System Dashboard";
+    return () => {
+      document.title = "BHaws Management System";
+    };
+  }, []);
 
   const isAdmin = user?.role === "Admin";
   const isStaff = user?.role === "Staff";
@@ -132,7 +139,7 @@ const Dashboard = () => {
         {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="page-header">{isBoarder ? `Welcome, ${user?.fullName}` : "Dashboard"}</h1>
+            <h1 className="page-header">{isBoarder ? `Welcome, ${user?.fullName}` : "BHaws Management and Monitoring System"}</h1>
             <p className="page-subtitle">
               {new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
