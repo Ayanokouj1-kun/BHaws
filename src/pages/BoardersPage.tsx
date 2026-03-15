@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 const BoardersPage = () => {
   const { boarders, rooms, profiles, addBoarder, updateBoarder, deleteBoarder, addUser, isLoading, user } = useData();
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -523,6 +523,17 @@ const BoardersPage = () => {
                     className="h-9 px-3 text-xs bg-card"
                   />
                   </div>
+                <div className="grid gap-1.5">
+                  <Label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <AlertCircle className="h-3 w-3" /> Emergency Contact
+                  </Label>
+                  <Input
+                    value={currentBoarder.emergencyContact}
+                    onChange={(e) => setCurrentBoarder({ ...currentBoarder, emergencyContact: e.target.value })}
+                    placeholder="Name & Number"
+                    className="h-9 px-3 text-xs bg-card"
+                  />
+                </div>
                 </div>
 
                 {mode === "add" && (

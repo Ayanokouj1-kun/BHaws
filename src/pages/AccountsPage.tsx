@@ -228,11 +228,6 @@ const AccountsPage = () => {
                           >
                             {profile.role === "SuperAdmin" ? "Super Admin" : profile.role}
                           </Badge>
-                          {profile.role === "SuperAdmin" && (
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase bg-primary/10 text-primary border-primary/30">
-                              Super
-                            </Badge>
-                          )}
                           {isSystemAccount(profile) && profile.role !== "SuperAdmin" && (
                             <Badge variant="outline" className="text-[9px] font-bold uppercase bg-accent/10 text-accent border-accent/30">
                               System
@@ -345,7 +340,14 @@ const AccountsPage = () => {
                 <Label>Link to Boarder *</Label>
                 <Select
                   value={newUser.boarderId}
-                  onValueChange={(v) => setNewUser({ ...newUser, boarderId: v })}
+                  onValueChange={(v) => {
+                    const b = boarders.find(b => b.id === v);
+                    setNewUser({ 
+                      ...newUser, 
+                      boarderId: v,
+                      fullName: b ? b.fullName : newUser.fullName 
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a boarder..." />

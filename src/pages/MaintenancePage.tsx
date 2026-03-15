@@ -73,7 +73,7 @@ const MaintenancePage = () => {
     const [mode, setMode] = useState<"add" | "edit">("add");
     const [current, setCurrent] = useState<Partial<MaintenanceRequest>>(emptyForm());
 
-    const isAdmin = user?.role === "Admin";
+    const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
     const isStaff = user?.role === "Staff";
     const isBoarder = user?.role === "Boarder";
 

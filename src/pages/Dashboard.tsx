@@ -40,8 +40,8 @@ const Dashboard = () => {
     };
   }, []);
 
-  const isAdmin = user?.role === "Admin";
-  const isStaff = user?.role === "Staff";
+  const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
+  const isStaff = user?.role === "Staff" || user?.role === "Admin" || user?.role === "SuperAdmin";
   const isBoarder = user?.role === "Boarder";
 
   // ── Boarder specific logic ──
@@ -505,14 +505,14 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "Add Boarder", icon: <Users className="h-4 w-4" />, path: "/boarders", bg: "bg-accent/5 hover:bg-accent/10 border-accent/20 text-accent", roles: ["Admin", "Staff"] },
-                      { label: "Record Payment", icon: <CreditCard className="h-4 w-4" />, path: "/payments", bg: "bg-success/5 hover:bg-success/10 border-success/20 text-success", roles: ["Admin", "Staff"] },
-                      { label: "Add Room", icon: <Building2 className="h-4 w-4" />, path: "/rooms", bg: "bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary", roles: ["Admin"] },
-                      { label: "New Expense", icon: <Receipt className="h-4 w-4" />, path: "/expenses", bg: "bg-warning/5 hover:bg-warning/10 border-warning/20 text-warning", roles: ["Admin", "Staff"] },
-                      { label: "Maintenance", icon: <Wrench className="h-4 w-4" />, path: "/maintenance", bg: "bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/20 text-orange-600", roles: ["Admin", "Staff", "Boarder"] },
-                      { label: "Reports", icon: <Download className="h-4 w-4" />, path: "/reports", bg: "bg-purple-500/5 hover:bg-purple-500/10 border-purple-500/20 text-purple-600", roles: ["Admin", "Staff"] },
-                      { label: "Audit Logs", icon: <CheckCircle2 className="h-4 w-4" />, path: "/audit-logs", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["Admin"] },
-                      { label: "Settings", icon: <Settings className="h-4 w-4" />, path: "/settings", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["Admin"] },
+                      { label: "Add Boarder", icon: <Users className="h-4 w-4" />, path: "/boarders", bg: "bg-accent/5 hover:bg-accent/10 border-accent/20 text-accent", roles: ["SuperAdmin", "Admin", "Staff"] },
+                      { label: "Record Payment", icon: <CreditCard className="h-4 w-4" />, path: "/payments", bg: "bg-success/5 hover:bg-success/10 border-success/20 text-success", roles: ["SuperAdmin", "Admin", "Staff"] },
+                      { label: "Add Room", icon: <Building2 className="h-4 w-4" />, path: "/rooms", bg: "bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary", roles: ["SuperAdmin", "Admin"] },
+                      { label: "New Expense", icon: <Receipt className="h-4 w-4" />, path: "/expenses", bg: "bg-warning/5 hover:bg-warning/10 border-warning/20 text-warning", roles: ["SuperAdmin", "Admin", "Staff"] },
+                      { label: "Maintenance", icon: <Wrench className="h-4 w-4" />, path: "/maintenance", bg: "bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/20 text-orange-600", roles: ["SuperAdmin", "Admin", "Staff", "Boarder"] },
+                      { label: "Reports", icon: <Download className="h-4 w-4" />, path: "/reports", bg: "bg-purple-500/5 hover:bg-purple-500/10 border-purple-500/20 text-purple-600", roles: ["SuperAdmin", "Admin", "Staff"] },
+                      { label: "Audit Logs", icon: <CheckCircle2 className="h-4 w-4" />, path: "/audit-logs", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["SuperAdmin", "Admin"] },
+                      { label: "Settings", icon: <Settings className="h-4 w-4" />, path: "/settings", bg: "bg-muted hover:bg-muted/80 border-border text-muted-foreground", roles: ["SuperAdmin", "Admin"] },
                     ].filter(a => a.roles.includes(user?.role || "Boarder")).map(a => (
                       <button
                         key={a.label}

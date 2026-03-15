@@ -70,7 +70,7 @@ type SortOrder = "newest" | "oldest";
 
 const ExpensesPage = () => {
     const { expenses, addExpense, updateExpense, deleteExpense, payments, user, isLoading } = useData();
-    const isAdmin = user?.role === "Admin";
+    const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
 
     // existing filters
     const [search, setSearch] = useState("");

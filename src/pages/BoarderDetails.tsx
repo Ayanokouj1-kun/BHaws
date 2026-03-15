@@ -52,14 +52,6 @@ const BoarderDetails = () => {
                         <h1 className="page-header">{boarder.fullName}</h1>
                         <p className="page-subtitle">Boarder Profile & Payment History</p>
                     </div>
-                    <div className="ml-auto flex gap-2">
-                        <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                            <Printer className="h-4 w-4" /> Print Profile
-                        </Button>
-                        <Button className="gap-2">
-                            <FileText className="h-4 w-4" /> Statement of Account
-                        </Button>
-                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

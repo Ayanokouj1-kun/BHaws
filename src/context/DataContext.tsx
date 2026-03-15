@@ -98,8 +98,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // For simplicity, we fetch everything if possible but filter based on role logic
         try {
             const getAdminIdFilter = () => {
-                if (!user || user.role === "SuperAdmin") return null;
-                return user.role === "Admin" ? user.id : user.createdBy;
+                if (!user) return null;
+                // Both Admin and SuperAdmin manage their own separate data silos
+                if (user.role === "SuperAdmin" || user.role === "Admin") return user.id;
+                // Staff/Boarders see their manager's data
+                return user.createdBy || null;
             };
 
             const adminFilter = getAdminIdFilter();
@@ -126,19 +129,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     adminFilter
                         ? supabase.from("audit_logs").select("*").eq("admin_id", adminFilter).order("timestamp", { ascending: false })
                         : supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
-                    adminFilter
-                        ? supabase.from("settings").select("*").eq("admin_id", adminFilter).maybeSingle()
-                        : supabase.from("settings").select("*").eq("id", 1).single(),
+                    supabase.from("settings").select("*").eq("admin_id", adminFilter || (user?.id || "")).maybeSingle(),
                     safeSelect("maintenance_requests"),
                     safeSelect("expenses"),
                     adminFilter 
                         ? supabase.from("announcements").select("*").or(`admin_id.is.null,admin_id.eq.${adminFilter}`)
                         : supabase.from("announcements").select("*"), 
-                    user?.role === "SuperAdmin" 
-                        ? supabase.from("accounts").select("*") 
-                        : (adminFilter 
-                            ? supabase.from("accounts").select("*").or(`id.eq.${user?.id},createdBy.eq.${adminFilter}`)
-                            : supabase.from("accounts").select("*").eq("id", user?.id || ""))
+                    adminFilter 
+                        ? supabase.from("profiles").select("*").or(`id.eq.${user?.id},created_by.eq.${adminFilter}`)
+                        : supabase.from("profiles").select("*").eq("id", user?.id || "")
                 ]);
 
             if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => {
@@ -208,9 +207,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     gcashQRCode: s.gcash_qr_code || localStorage.getItem(`bhaws_fallback_gcash_qr_${adminFilter || 'global'}`) || "",
                     adminId: s.admin_id
                 });
-            } else if (adminFilter) {
-                // If admin has no settings record yet, show DEFAULT but with their adminId
-                setSettings({ ...DEFAULT_SETTINGS, adminId: adminFilter });
+            } else {
+                // If admin has no settings record yet, use DEFAULT but link to their effective admin ID
+                setSettings({ ...DEFAULT_SETTINGS, adminId: adminFilter || user?.id });
             }
 
             if (maintRes) setMaintenance(maintRes.map((m: any) => ({
@@ -218,25 +217,52 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })));
             if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
             if (annRes?.data) setAnnouncements(annRes.data.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
-            if (profRes?.data) setProfiles(profRes.data.map((p: any) => {
-                // Enforce canonical roles for built-in usernames
-                let role = p.role;
-                if (p.username === "superadmin") role = "SuperAdmin";
-                if (p.username === "admin") role = "Admin";
-                if (p.username === "staff") role = "Staff";
-                return {
-                    ...p,
-                    role,
-                    fullName: p.fullName || p.full_name,
-                    boarderId: p.boarderId || p.boarder_id,
-                    email: p.email,
-                    phone: p.phone,
-                    address: p.address,
-                    profilePhoto: p.profilePhoto || p.profile_photo,
-                    emergencyContact: p.emergencyContact || p.emergency_contact,
-                    createdBy: p.createdBy || p.created_by,
-                };
-            }));
+            if (profRes?.data) {
+                const updatedProfiles = profRes.data.map((p: any) => {
+                    let role = p.role;
+                    if (p.username === "superadmin") role = "SuperAdmin";
+                    if (p.username === "admin") role = "Admin";
+                    if (p.username === "staff") role = "Staff";
+
+                    // Fallback to boarder photo if profile photo is missing
+                    let photo = p.profile_photo;
+                    if (!photo && p.boarder_id) {
+                        const b = boardersRes?.data?.find((b: any) => b.id === p.boarder_id);
+                        if (b) photo = b.profile_photo;
+                    }
+
+                    return {
+                        ...p,
+                        role,
+                        fullName: p.full_name,
+                        boarderId: p.boarder_id,
+                        email: p.email,
+                        phone: p.phone,
+                        address: p.address,
+                        profilePhoto: photo,
+                        emergencyContact: p.emergency_contact,
+                        createdBy: p.created_by,
+                    };
+                });
+                setProfiles(updatedProfiles);
+
+                // Sync the current 'user' object if they are in this list
+                if (user) {
+                    const myUpdatedProfile = updatedProfiles.find(p => p.id === user.id);
+                    if (myUpdatedProfile) {
+                        setUser(prev => {
+                            if (!prev) return null;
+                            // Only update if something actually changed to avoid loop
+                            if (prev.fullName !== myUpdatedProfile.fullName || 
+                                prev.profilePhoto !== myUpdatedProfile.profilePhoto ||
+                                prev.role !== myUpdatedProfile.role) {
+                                return { ...prev, ...myUpdatedProfile };
+                            }
+                            return prev;
+                        });
+                    }
+                }
+            }
 
             console.log("✅ BHaws: Cloud sync complete.");
         } catch (err) {
@@ -301,7 +327,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // 1. Try Supabase profiles table (preferred path for Admin/Staff/Boarder)
         try {
             const { data: profile, error } = await supabase
-                .from("accounts").select("*").eq("username", lc).single();
+                .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
                 let effectiveRole = profile.role || "Boarder";
                 if (profile.username === "superadmin") effectiveRole = "SuperAdmin";
@@ -321,10 +347,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                 const u = {
                     id: profile.id, username: profile.username,
-                    fullName: profile.fullName || profile.full_name, role: effectiveRole, boarderId: profile.boarderId || profile.boarder_id,
+                    fullName: profile.full_name, role: effectiveRole, boarderId: profile.boarder_id,
                     email: profile.email, phone: profile.phone, address: profile.address,
-                    profilePhoto: profile.profilePhoto || profile.profile_photo, emergencyContact: profile.emergencyContact || profile.emergency_contact,
-                    createdBy: profile.createdBy || profile.created_by,
+                    profilePhoto: profile.profile_photo, emergencyContact: profile.emergency_contact,
+                    createdBy: profile.created_by,
                 };
                 setUser(u as any);
                 refreshData();
@@ -481,6 +507,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }).eq("id", boarder.id);
 
         if (error) { toast.error("Failed to update boarder"); return; }
+        
+        // Sync to Profile if exists
+        await supabase.from("profiles").update({
+            full_name: boarder.fullName,
+            profile_photo: boarder.profilePhoto,
+            email: boarder.email,
+            phone: boarder.contactNumber,
+            address: boarder.address,
+            emergency_contact: boarder.emergencyContact
+        }).eq("boarder_id", boarder.id);
+
         if (old && old.assigned_bed_id !== boarder.assignedBedId) {
             if (old.assigned_bed_id) await supabase.from("beds").update({ boarder_id: null, status: "Available" }).eq("id", old.assigned_bed_id);
             if (boarder.assignedBedId) await supabase.from("beds").update({ boarder_id: boarder.id, status: "Occupied" }).eq("id", boarder.assignedBedId);
@@ -642,7 +679,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- ANNOUNCEMENTS ---
     const addAnnouncement = async (ann: Announcement): Promise<boolean> => {
         if (user?.role === "Boarder") { toast.error("Unauthorized"); return false; }
-        const adminId = ann.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        const adminId = ann.adminId || (user?.role === "SuperAdmin" ? null : (user?.role === "Admin" ? user.id : user?.createdBy));
         const { data, error } = await supabase.from("announcements").insert([{
             title: ann.title,
             message: ann.message,
@@ -701,43 +738,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 gcash_qr_code: newSettings.gcashQRCode
             };
 
-            const adminId = user?.role === "Admin" ? user.id : user?.createdBy;
-            
-            // Check if settings exist for this admin
-            const { data: existing } = await supabase.from("settings").select("id").eq("admin_id", adminId).maybeSingle();
+            const adminId = (user?.role === "Admin" || user?.role === "SuperAdmin") ? user.id : user?.createdBy;
+            if (!adminId) throw new Error("No administrator ID found for settings.");
 
-            let query;
+            // 1. Find existing settings for this specific admin
+            const { data: existing } = await supabase
+                .from("settings")
+                .select("id")
+                .eq("admin_id", adminId)
+                .maybeSingle();
+
             if (existing) {
-                query = supabase.from("settings").update(updatePayload).eq("id", existing.id);
+                // 2. Perform a direct UPDATE by Primary Key ID
+                const { error: upError } = await supabase
+                    .from("settings")
+                    .update(updatePayload)
+                    .eq("id", existing.id);
+                
+                if (upError) throw upError;
             } else {
-                query = supabase.from("settings").insert([{ ...updatePayload, admin_id: adminId }]);
+                // 3. Try to INSERT new row
+                const { error: inError } = await supabase
+                    .from("settings")
+                    .insert({ ...updatePayload, admin_id: adminId });
+                
+                if (inError) {
+                    // Critical catch: Table is still in "Single Row" mode
+                    if (inError.message?.includes("settings_pkey") || inError.message?.includes("id = 1")) {
+                        toast.error("Database Error: Duplicate Settings ID. Please run the FIX_SETTINGS_ERROR.sql script in Supabase to enable multiple admins.");
+                        setIsLoading(false);
+                        return;
+                    }
+                    throw inError;
+                }
             }
 
-            const { error: fullError } = await query;
-
-            if (fullError && (fullError.message?.includes("column") || fullError.code === "PGRST204")) {
-                console.warn("DB Schema mismatch: GCash columns missing. Falling back...");
-
-                const fallbackPayload = { ...updatePayload };
-                delete fallbackPayload.gcash_number;
-                delete fallbackPayload.gcash_qr_code;
-
-                const { error: partialError } = await supabase.from("settings").update(fallbackPayload).eq("id", 1);
-
-                if (partialError) throw partialError;
-
-                // Save to local storage as emergency backup
-                localStorage.setItem("bhaws_fallback_gcash_number", newSettings.gcashNumber || "");
-                localStorage.setItem("bhaws_fallback_gcash_qr", newSettings.gcashQRCode || "");
-
-                toast.info("Settings saved, but GCash requires a database update.");
-            } else if (fullError) {
-                throw fullError;
-            } else {
-                toast.success("Settings saved successfully");
-            }
-
-            addLog("Settings Updated", "Settings", "1", "System global settings were updated.");
+            toast.success("Settings saved successfully");
+            addLog("Settings Updated", "Settings", adminId, "Administrator settings were updated.");
             await refreshData();
         } catch (error: any) {
             console.error("Error updating settings:", error);
@@ -762,7 +799,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
              return;
         }
 
-        const { error } = await supabase.from("accounts").update({ role: newRole }).eq("id", userId);
+        const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
         if (error) { toast.error("Failed to update user role"); return; }
         toast.success(`User role updated to ${newRole}`);
         addLog("User Role Updated", "User", userId, `Role changed to ${newRole}`);
@@ -785,7 +822,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         
         const createdBy = profile.createdBy || user?.id;
 
-        const { error } = await supabase.from("accounts").insert([{
+        const { error } = await supabase.from("profiles").insert([{
             id,
             username: usernameClean,
             full_name: profile.fullName.trim(),
@@ -817,7 +854,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        const { error } = await supabase.from("accounts").delete().eq("id", userId);
+        const { error } = await supabase.from("profiles").delete().eq("id", userId);
         if (error) { toast.error("Failed to delete account"); return; }
         toast.success("Account deleted");
         addLog("Account Deleted", "User", userId, "User account removed.");
@@ -826,34 +863,49 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const updateProfile = async (userId: string, data: { fullName?: string; email?: string; phone?: string; address?: string; profilePhoto?: string; emergencyContact?: string }) => {
         const payload: Record<string, unknown> = {};
-        if (data.fullName !== undefined) payload.full_name = data.fullName;
+        if (data.fullName !== undefined) {
+            payload.full_name = data.fullName;
+        }
         if (data.email !== undefined) payload.email = data.email;
         if (data.phone !== undefined) payload.phone = data.phone;
         if (data.address !== undefined) payload.address = data.address;
         if (data.profilePhoto !== undefined) payload.profile_photo = data.profilePhoto;
         if (data.emergencyContact !== undefined) payload.emergency_contact = data.emergencyContact;
-        if (data.profilePhoto !== undefined) payload.profilePhoto = data.profilePhoto; // Changed from profile_photo
-        if (data.emergencyContact !== undefined) payload.emergencyContact = data.emergencyContact; // Changed from emergency_contact
         if (Object.keys(payload).length === 0) return;
         
         let targetId = userId;
         // If using mock ID 'sa1', try to find real ID first
         if (userId === "sa1") {
-            const { data: realProf } = await supabase.from("accounts").select("id").eq("username", "superadmin").maybeSingle(); // Changed from profiles
+            const { data: realProf } = await supabase.from("profiles").select("id").eq("username", "superadmin").maybeSingle(); // Changed from profiles
             if (realProf) targetId = realProf.id;
         }
 
-        const { error } = await supabase.from("accounts").update(payload).eq("id", targetId).select(); // Changed from profiles
+        if (targetId === "sa1") {
+             toast.error("Your account is currently in 'Mock' mode. Please register this account in the database first to enable profile updates.");
+             return;
+        }
+
+        const { error } = await supabase.from("profiles").update(payload).eq("id", targetId).select(); // Changed from profiles
         
         if (error) { 
             toast.error("Failed to update profile: " + error.message); 
             return; 
         }
-        
-        if (!error && (!targetId || targetId === "sa1")) {
-             // If still mock or no update happened, it might be the first save ever
-             // We could attempt an insert but for now just warn
-             console.warn("Update profile target not found in DB");
+
+        // Sync to Boarder if exists
+        const currentProf = profiles.find(p => p.id === targetId);
+        if (currentProf?.boarderId) {
+            const boarderPayload: any = {};
+            if (data.fullName) boarderPayload.full_name = data.fullName;
+            if (data.profilePhoto) boarderPayload.profile_photo = data.profilePhoto;
+            if (data.email) boarderPayload.email = data.email;
+            if (data.phone) boarderPayload.contact_number = data.phone;
+            if (data.address) boarderPayload.address = data.address;
+            if (data.emergencyContact) boarderPayload.emergency_contact = data.emergencyContact;
+
+            if (Object.keys(boarderPayload).length > 0) {
+                await supabase.from("boarders").update(boarderPayload).eq("id", currentProf.boarderId);
+            }
         }
 
         toast.success("Profile updated");

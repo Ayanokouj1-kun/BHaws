@@ -48,7 +48,7 @@ const getBedBarColor = (status: Room["status"]) => {
 
 const RoomsPage = () => {
   const { rooms, addRoom, updateRoom, deleteRoom, isLoading, user } = useData();
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [floorFilter, setFloorFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");

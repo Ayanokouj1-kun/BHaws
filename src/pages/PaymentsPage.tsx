@@ -18,7 +18,7 @@ import { ThermalReceipt } from "@/components/receipt/ThermalReceipt";
 
 const PaymentsPage = () => {
   const { payments, boarders, addPayment, updatePayment, deletePayment, isLoading, settings, rooms, user } = useData();
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -263,16 +263,16 @@ const PaymentsPage = () => {
                   <TableCell className="font-mono text-[10px] text-muted-foreground uppercase max-w-[90px] truncate">
                     {p.receiptNumber}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-[11px] font-bold overflow-hidden shadow-sm">
+                  <TableCell className="whitespace-nowrap min-w-[180px]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 shrink-0 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-[11px] font-bold overflow-hidden shadow-sm">
                         {boarders.find(b => b.id === p.boarderId)?.profilePhoto ? (
                           <img src={boarders.find(b => b.id === p.boarderId)?.profilePhoto} className="h-full w-full object-cover" alt="" />
                         ) : (
                           getBoarderName(p.boarderId).charAt(0)
                         )}
                       </div>
-                      <span className="font-medium text-[12px] leading-tight line-clamp-2 max-w-[140px]">
+                      <span className="font-bold text-[12px] leading-tight text-foreground">
                         {getBoarderName(p.boarderId)}
                       </span>
                     </div>
