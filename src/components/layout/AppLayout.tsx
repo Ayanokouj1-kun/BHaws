@@ -402,7 +402,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <div className="hidden sm:block text-left">
                     <p className="text-xs font-semibold text-foreground leading-none">{user?.fullName || "User"}</p>
                     <p className="text-[10px] text-muted-foreground leading-none mt-0.5">
-                      {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder")}
+                      {user?.role === "SuperAdmin" ? "super admin" : (user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder"))}
                     </p>
                   </div>
                   <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
@@ -413,11 +413,13 @@ export function AppLayout({ children }: AppLayoutProps) {
                     <div className="px-4 py-3 border-b border-border/60">
                       <p className="text-sm font-bold text-foreground">{user?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{user?.username}</p>
-                      <Badge variant="outline" className={`mt-1.5 text-[9px] font-bold uppercase border-opacity-20 ${user?.role === "Admin" ? "text-accent border-accent bg-accent/5" :
+                      <Badge variant="outline" className={`mt-1.5 text-[9px] font-bold uppercase border-opacity-20 ${
+                        user?.role === "SuperAdmin" ? "text-primary border-primary bg-primary/5" :
+                        user?.role === "Admin" ? "text-accent border-accent bg-accent/5" :
                         user?.role === "Staff" ? "text-success border-success bg-success/5" :
                           "text-warning border-warning bg-warning/5"
                         }`}>
-                        {user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder")}
+                        {user?.role === "SuperAdmin" ? "super admin" : (user?.role === "Admin" ? "admin" : (user?.role === "Staff" ? "staff" : "boarder"))}
                       </Badge>
                     </div>
                     <div className="py-1.5">

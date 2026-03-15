@@ -26,8 +26,9 @@ export const AccountPage = () => {
   const linkedBoarder: Boarder | undefined = isBoarder
     ? boarders.find(b => b.id === user?.boarderId)
     : undefined;
-  const myProfile = user ? profiles.find(p => p.id === user.id || p.username === user.username) : undefined;
-  const canSaveToDb = !!myProfile || !!linkedBoarder;
+  const myProfile = user ? profiles.find(p => p.id === user.id || p.username.toLowerCase() === user.username.toLowerCase()) : undefined;
+  const isSuper = user?.role === "SuperAdmin";
+  const canSaveToDb = !!myProfile || !!linkedBoarder || isSuper;
 
   const boarderRoom = linkedBoarder
     ? rooms.find(r => r.id === linkedBoarder.assignedRoomId)
@@ -112,8 +113,11 @@ export const AccountPage = () => {
           emergencyContact,
           profilePhoto,
         });
-      } else if (myProfile) {
-        await updateProfile(myProfile.id, {
+      } else if (myProfile || isSuper) {
+        const idToUpdate = myProfile?.id || user?.id;
+        if (!idToUpdate) throw new Error("No user ID found");
+        
+        await updateProfile(idToUpdate, {
           fullName,
           email,
           phone: contactNumber,
@@ -138,8 +142,16 @@ export const AccountPage = () => {
             <h1 className="page-header">My Account</h1>
             <p className="page-subtitle">Manage your profile and account details</p>
           </div>
-          <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest">
-            {user.role}
+          <Badge 
+            variant="outline" 
+            className={`text-[10px] font-bold uppercase tracking-widest ${
+              user.role === "SuperAdmin" ? "bg-primary/10 text-primary border-primary/20" :
+              user.role === "Admin" ? "bg-accent/10 text-accent border-accent/20" :
+              user.role === "Staff" ? "bg-success/10 text-success border-success/20" :
+              "bg-warning/10 text-warning border-warning/20"
+            }`}
+          >
+            {user.role === "SuperAdmin" ? "Super Admin" : user.role}
           </Badge>
         </div>
 

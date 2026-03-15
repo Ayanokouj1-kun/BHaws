@@ -57,7 +57,7 @@ const AccountsPage = () => {
   const [newUser, setNewUser] = useState({
     username: "",
     fullName: "",
-    role: "Staff" as "Admin" | "Staff" | "Boarder",
+    role: "Staff" as UserType["role"],
     boarderId: "",
   });
 
@@ -114,21 +114,23 @@ const AccountsPage = () => {
     deleteUser(profile.id);
   };
 
-  const isSuper = (profile: UserType) =>
-    profile.username === "admin" || profile.username === "staff";
+  const isSystemAccount = (profile: UserType) =>
+    profile.username === "superadmin";
 
   const roleBadgeClass = (role: string) =>
-    role === "Admin"
-      ? "bg-accent/10 text-accent border-accent/20"
-      : role === "Staff"
-        ? "bg-success/10 text-success border-success/20"
-        : "bg-warning/10 text-warning border-warning/20";
+    role === "SuperAdmin"
+      ? "bg-primary/10 text-primary border-primary/20"
+      : role === "Admin"
+        ? "bg-accent/10 text-accent border-accent/20"
+        : role === "Staff"
+          ? "bg-success/10 text-success border-success/20"
+          : "bg-warning/10 text-warning border-warning/20";
 
-  if (currentUser?.role !== "Admin") {
+  if (currentUser?.role !== "Admin" && currentUser?.role !== "SuperAdmin") {
     return (
       <AppLayout>
         <div className="flex h-64 items-center justify-center text-destructive font-semibold">
-          Access denied. Admin only.
+          Access denied.
         </div>
       </AppLayout>
     );
@@ -151,7 +153,9 @@ const AccountsPage = () => {
           <div>
             <h1 className="page-header">Accounts</h1>
             <p className="page-subtitle">
-              Create and monitor user accounts (Admin, Staff, Boarder)
+              {currentUser?.role === "SuperAdmin" 
+                ? "Manage all Admins and user accounts across the system" 
+                : "Create and monitor user accounts (Staff, Boarder)"}
             </p>
           </div>
           <Button className="gap-2" onClick={() => setCreateOpen(true)}>
@@ -222,11 +226,16 @@ const AccountsPage = () => {
                             variant="outline"
                             className={`text-[10px] font-bold uppercase ${roleBadgeClass(profile.role)}`}
                           >
-                            {profile.role}
+                            {profile.role === "SuperAdmin" ? "Super Admin" : profile.role}
                           </Badge>
-                          {isSuper(profile) && (
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase bg-accent/10 text-accent border-accent/30">
+                          {profile.role === "SuperAdmin" && (
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase bg-primary/10 text-primary border-primary/30">
                               Super
+                            </Badge>
+                          )}
+                          {isSystemAccount(profile) && profile.role !== "SuperAdmin" && (
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase bg-accent/10 text-accent border-accent/30">
+                              System
                             </Badge>
                           )}
                         </div>
@@ -240,16 +249,16 @@ const AccountsPage = () => {
                           <Select
                             value={profile.role}
                             onValueChange={(val) =>
-                              updateUserRole(profile.id, val as "Admin" | "Staff" | "Boarder")
+                              updateUserRole(profile.id, val as UserType["role"])
                             }
-                            disabled={profile.id === currentUser?.id || isSuper(profile)}
+                            disabled={profile.id === currentUser?.id || isSystemAccount(profile)}
                           >
                             <SelectTrigger className="w-[100px] h-8 text-[11px]">
                               <Edit className="h-3 w-3 mr-1" />
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Admin">Admin</SelectItem>
+                              {currentUser?.role === "SuperAdmin" && <SelectItem value="Admin">Admin</SelectItem>}
                               <SelectItem value="Staff">Staff</SelectItem>
                               <SelectItem value="Boarder">Boarder</SelectItem>
                             </SelectContent>
@@ -259,7 +268,7 @@ const AccountsPage = () => {
                             size="icon"
                             className="h-8 w-8 text-destructive hover:bg-destructive/10"
                             onClick={() => handleDelete(profile)}
-                            disabled={profile.id === currentUser?.id || isSuper(profile)}
+                            disabled={profile.id === currentUser?.id || isSystemAccount(profile)}
                             title="Delete account"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -320,7 +329,12 @@ const AccountsPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
+                  {currentUser?.role === "SuperAdmin" && (
+                    <>
+                      <SelectItem value="SuperAdmin">Super Admin</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                    </>
+                  )}
                   <SelectItem value="Staff">Staff</SelectItem>
                   <SelectItem value="Boarder">Boarder</SelectItem>
                 </SelectContent>

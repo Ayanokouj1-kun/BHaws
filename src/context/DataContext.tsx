@@ -50,7 +50,7 @@ interface DataContextType {
     deleteAnnouncement: (id: string) => Promise<void>;
     updateSettings: (newSettings: BhSettings) => Promise<void>;
     updateUserRole: (userId: string, newRole: "Admin" | "Staff" | "Boarder") => Promise<void>;
-    addUser: (profile: { username: string; fullName: string; role: "Admin" | "Staff" | "Boarder"; boarderId?: string }) => Promise<void>;
+    addUser: (profile: { username: string; fullName: string; role: UserRole; boarderId?: string; createdBy?: string }) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     updateProfile: (userId: string, data: { fullName?: string; email?: string; phone?: string; address?: string; profilePhoto?: string; emergencyContact?: string }) => Promise<void>;
     addLog: (action: string, entity: string, entityId: string, details: string) => Promise<void>;
@@ -73,8 +73,7 @@ const DEFAULT_SETTINGS: BhSettings = {
 
 // Built-in fallback users — always works even without Supabase
 const MOCK_USERS = [
-    { id: "u1", username: "admin", fullName: "House Admin", role: "Admin" as const },
-    { id: "u2", username: "staff", fullName: "Care Taker", role: "Staff" as const },
+    { id: "sa1", username: "superadmin", fullName: "Super Admin", role: "SuperAdmin" as const },
 ];
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -93,26 +92,53 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Start as FALSE so the login page shows immediately
     const [isLoading, setIsLoading] = useState(false);
 
-    // --- BACKGROUND CLOUD SYNC (never blocks the UI) ---
+    // --- BACKGROUND CLOUD SYNC ---
     const refreshData = useCallback(async () => {
+        // If no user, only fetch basic info like settings or announcements if public
+        // For simplicity, we fetch everything if possible but filter based on role logic
         try {
-            const safe = async (table: string, query = "*") => {
-                const { data, error } = await (supabase.from(table) as any).select(query);
+            const getAdminIdFilter = () => {
+                if (!user || user.role === "SuperAdmin") return null;
+                return user.role === "Admin" ? user.id : user.createdBy;
+            };
+
+            const adminFilter = getAdminIdFilter();
+
+            const safeSelect = async (table: string, query = "*") => {
+                let q = supabase.from(table).select(query);
+                if (adminFilter && table !== "settings" && table !== "profiles" && table !== "announcements") {
+                    q = q.eq("admin_id", adminFilter);
+                }
+                const { data, error } = await q as any;
                 if (error) { console.warn(`[Sync] ${table}:`, error.message); return null; }
                 return data;
             };
 
             const [roomsRes, boardersRes, paymentsRes, logsRes, settingsRes, maintRes, expRes, annRes, profRes] =
                 await Promise.all([
-                    supabase.from("rooms").select("*, beds(*)"),
-                    supabase.from("boarders").select("*").order("created_at", { ascending: true }),
-                    safe("payments"),
-                    supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
-                    supabase.from("settings").select("*").eq("id", 1).single(),
-                    safe("maintenance_requests"),
-                    safe("expenses"),
-                    safe("announcements"),
-                    safe("profiles"),
+                    adminFilter 
+                        ? supabase.from("rooms").select("*, beds(*)").eq("admin_id", adminFilter)
+                        : supabase.from("rooms").select("*, beds(*)"),
+                    adminFilter
+                        ? supabase.from("boarders").select("*").eq("admin_id", adminFilter).order("created_at", { ascending: true })
+                        : supabase.from("boarders").select("*").order("created_at", { ascending: true }),
+                    safeSelect("payments"),
+                    adminFilter
+                        ? supabase.from("audit_logs").select("*").eq("admin_id", adminFilter).order("timestamp", { ascending: false })
+                        : supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
+                    adminFilter
+                        ? supabase.from("settings").select("*").eq("admin_id", adminFilter).maybeSingle()
+                        : supabase.from("settings").select("*").eq("id", 1).single(),
+                    safeSelect("maintenance_requests"),
+                    safeSelect("expenses"),
+                    adminFilter 
+                        ? supabase.from("announcements").select("*").or(`admin_id.is.null,admin_id.eq.${adminFilter}`)
+                        : supabase.from("announcements").select("*"), 
+                    user?.role === "SuperAdmin" 
+                        ? supabase.from("accounts").select("*") 
+                        : (adminFilter 
+                            ? supabase.from("accounts").select("*").or(`id.eq.${user?.id},createdBy.eq.${adminFilter}`)
+                            : supabase.from("accounts").select("*").eq("id", user?.id || ""))
                 ]);
 
             if (roomsRes?.data) setRooms(roomsRes.data.map((r: any) => {
@@ -178,31 +204,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     lateFeeEnabled: s.late_fee_enabled !== false,
                     lateFeeAmount: parseFloat(s.late_fee_amount) || 0,
                     gracePeriodDays: s.grace_period_days || 0,
-                    gcashNumber: s.gcash_number || localStorage.getItem("bhaws_fallback_gcash_number") || "",
-                    gcashQRCode: s.gcash_qr_code || localStorage.getItem("bhaws_fallback_gcash_qr") || ""
+                    gcashNumber: s.gcash_number || localStorage.getItem(`bhaws_fallback_gcash_number_${adminFilter || 'global'}`) || "",
+                    gcashQRCode: s.gcash_qr_code || localStorage.getItem(`bhaws_fallback_gcash_qr_${adminFilter || 'global'}`) || "",
+                    adminId: s.admin_id
                 });
+            } else if (adminFilter) {
+                // If admin has no settings record yet, show DEFAULT but with their adminId
+                setSettings({ ...DEFAULT_SETTINGS, adminId: adminFilter });
             }
 
             if (maintRes) setMaintenance(maintRes.map((m: any) => ({
                 ...m, roomId: m.room_id, boarderId: m.boarder_id, createdAt: m.created_at, resolvedAt: m.resolved_at
             })));
             if (expRes) setExpenses(expRes.map((e: any) => ({ ...e, paidBy: e.paid_by, receiptRef: e.receipt_ref })));
-            if (annRes) setAnnouncements(annRes.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
-            if (profRes) setProfiles(profRes.map((p: any) => {
+            if (annRes?.data) setAnnouncements(annRes.data.map((a: any) => ({ ...a, createdAt: a.created_at, expiresAt: a.expires_at })));
+            if (profRes?.data) setProfiles(profRes.data.map((p: any) => {
                 // Enforce canonical roles for built-in usernames
                 let role = p.role;
+                if (p.username === "superadmin") role = "SuperAdmin";
                 if (p.username === "admin") role = "Admin";
                 if (p.username === "staff") role = "Staff";
                 return {
                     ...p,
                     role,
-                    fullName: p.full_name,
-                    boarderId: p.boarder_id,
+                    fullName: p.fullName || p.full_name,
+                    boarderId: p.boarderId || p.boarder_id,
                     email: p.email,
                     phone: p.phone,
                     address: p.address,
-                    profilePhoto: p.profile_photo,
-                    emergencyContact: p.emergency_contact,
+                    profilePhoto: p.profilePhoto || p.profile_photo,
+                    emergencyContact: p.emergencyContact || p.emergency_contact,
+                    createdBy: p.createdBy || p.created_by,
                 };
             }));
 
@@ -210,7 +242,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } catch (err) {
             console.error("Cloud sync error:", err);
         }
-    }, []);
+    }, [user]);
 
     // Kick off cloud sync in background after mount
     useEffect(() => {
@@ -269,9 +301,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // 1. Try Supabase profiles table (preferred path for Admin/Staff/Boarder)
         try {
             const { data: profile, error } = await supabase
-                .from("profiles").select("*").eq("username", lc).single();
+                .from("accounts").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
-                let effectiveRole = profile.role;
+                let effectiveRole = profile.role || "Boarder";
+                if (profile.username === "superadmin") effectiveRole = "SuperAdmin";
                 if (profile.username === "admin") effectiveRole = "Admin";
                 if (profile.username === "staff") effectiveRole = "Staff";
 
@@ -288,9 +321,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                 const u = {
                     id: profile.id, username: profile.username,
-                    fullName: profile.full_name, role: effectiveRole, boarderId: profile.boarder_id,
+                    fullName: profile.fullName || profile.full_name, role: effectiveRole, boarderId: profile.boarderId || profile.boarder_id,
                     email: profile.email, phone: profile.phone, address: profile.address,
-                    profilePhoto: profile.profile_photo, emergencyContact: profile.emergency_contact,
+                    profilePhoto: profile.profilePhoto || profile.profile_photo, emergencyContact: profile.emergencyContact || profile.emergency_contact,
+                    createdBy: profile.createdBy || profile.created_by,
                 };
                 setUser(u as any);
                 refreshData();
@@ -320,22 +354,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- AUDIT LOG ---
     const addLog = async (action: string, entity: string, entityId: string, details: string) => {
         try {
+            const adminId = user?.role === "SuperAdmin" ? null : (user?.role === "Admin" ? user.id : user?.createdBy);
             await supabase.from("audit_logs").insert([{
-                action, entity, entity_id: entityId, details, performed_by: user?.fullName || "System"
+                action, entity, entity_id: entityId, details, 
+                performed_by: user?.fullName || "System",
+                admin_id: adminId
             }]);
             refreshData();
         } catch { /* non-blocking */ }
     };
 
     const addRoom = async (room: Room) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can add rooms"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
+        
+        const adminId = room.adminId || (user?.role === "Admin" ? user.id : null);
         const underMaintenance = !!room.underMaintenance;
         const initialStatus = underMaintenance ? "Under Maintenance" : "Available";
 
         const { data: newRoom, error } = await supabase.from("rooms").insert([{
             name: room.name, capacity: room.capacity, monthly_rate: room.monthlyRate,
             status: initialStatus, under_maintenance: underMaintenance,
-            floor: room.floor, amenities: room.amenities, description: room.description
+            floor: room.floor, amenities: room.amenities, description: room.description,
+            admin_id: adminId
         }]).select().single();
 
         if (error) { toast.error("Failed to add room: " + error.message); return; }
@@ -350,7 +391,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const updateRoom = async (room: Room) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can edit rooms"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
+        
         const underMaintenance = !!room.underMaintenance;
         const newStatus = computeRoomStatus(room.beds || [], underMaintenance);
 
@@ -380,7 +423,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteRoom = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete rooms"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         const { error } = await supabase.from("rooms").delete().eq("id", id);
         if (error) toast.error("Failed to delete room");
         else { toast.success("Room deleted"); addLog("Room Deleted", "Room", id, "Room removed."); refreshData(); }
@@ -389,6 +433,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- BOARDERS ---
     const addBoarder = async (boarder: Boarder) => {
         if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
+        const adminId = boarder.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        
         const { data: nb, error } = await supabase.from("boarders").insert([{
             full_name: boarder.fullName,
             contact_number: boarder.contactNumber,
@@ -404,6 +450,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             occupation: boarder.occupation,
             gender: boarder.gender,
             profile_photo: boarder.profilePhoto,
+            admin_id: adminId
         }]).select().single();
 
         if (error) { toast.error("Failed to add boarder: " + error.message); return; }
@@ -414,6 +461,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const assignedRoom = rooms.find(r => r.id === boarder.assignedRoomId);
         addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}.`);
         refreshData();
+        return { ...boarder, id: nb.id };
     };
 
     const updateBoarder = async (boarder: Boarder) => {
@@ -444,7 +492,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
     const deleteBoarder = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete boarders"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         // 1. Find the boarder's assigned bed BEFORE deleting
         const { data: boarderData } = await supabase
             .from("boarders")
@@ -472,11 +521,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- PAYMENTS ---
     const addPayment = async (payment: Payment) => {
+        const adminId = payment.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
             method: payment.method, notes: payment.notes,
             receipt_number: payment.receiptNumber || generateReceiptNumber(),
+            admin_id: adminId
         }]);
         if (error) toast.error("Failed to record payment");
         else {
@@ -500,7 +551,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deletePayment = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete payment records"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         const { error } = await supabase.from("payments").delete().eq("id", id);
         if (error) toast.error("Failed to delete payment");
         else {
@@ -512,10 +564,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- MAINTENANCE ---
     const addMaintenance = async (req: MaintenanceRequest) => {
+        const adminId = req.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
         const { error } = await supabase.from("maintenance_requests").insert([{
             room_id: req.roomId, boarder_id: req.boarderId, title: req.title,
             description: req.description, priority: req.priority, status: req.status,
             category: req.category, images: req.images,
+            admin_id: adminId
         }]);
         if (error) {
             console.error("Supabase Maintenance Insert Error:", error);
@@ -548,16 +602,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteMaintenance = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete requests"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         await supabase.from("maintenance_requests").delete().eq("id", id);
         refreshData();
     };
 
     // --- EXPENSES ---
     const addExpense = async (expense: Expense) => {
+        const adminId = expense.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
         const { error } = await supabase.from("expenses").insert([{
             category: expense.category, description: expense.description,
-            amount: expense.amount, date: expense.date, paid_by: expense.paidBy
+            amount: expense.amount, date: expense.date, paid_by: expense.paidBy,
+            admin_id: adminId
         }]);
         if (error) toast.error("Failed to record expense");
         else {
@@ -576,7 +633,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteExpense = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete expenses"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         await supabase.from("expenses").delete().eq("id", id);
         refreshData();
     };
@@ -584,11 +642,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- ANNOUNCEMENTS ---
     const addAnnouncement = async (ann: Announcement): Promise<boolean> => {
         if (user?.role === "Boarder") { toast.error("Unauthorized"); return false; }
+        const adminId = ann.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
         const { data, error } = await supabase.from("announcements").insert([{
             title: ann.title,
             message: ann.message,
             priority: ann.priority,
-            expires_at: ann.expiresAt
+            expires_at: ann.expiresAt,
+            admin_id: adminId
         }]).select();
 
         if (error) {
@@ -612,7 +672,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteAnnouncement = async (id: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete announcements"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         const { error } = await supabase.from("announcements").delete().eq("id", id);
         if (!error) addLog("Announcement Deleted", "Announcement", id, `Announcement was removed.`);
         refreshData();
@@ -620,7 +681,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- SETTINGS ---
     const updateSettings = async (newSettings: BhSettings) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can modify system settings"); return; }
+        const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
+        if (!canWrite) { toast.error("Unauthorized"); return; }
         try {
             setIsLoading(true);
             const updatePayload: any = {
@@ -639,7 +701,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 gcash_qr_code: newSettings.gcashQRCode
             };
 
-            const { error: fullError } = await supabase.from("settings").update(updatePayload).eq("id", 1);
+            const adminId = user?.role === "Admin" ? user.id : user?.createdBy;
+            
+            // Check if settings exist for this admin
+            const { data: existing } = await supabase.from("settings").select("id").eq("admin_id", adminId).maybeSingle();
+
+            let query;
+            if (existing) {
+                query = supabase.from("settings").update(updatePayload).eq("id", existing.id);
+            } else {
+                query = supabase.from("settings").insert([{ ...updatePayload, admin_id: adminId }]);
+            }
+
+            const { error: fullError } = await query;
 
             if (fullError && (fullError.message?.includes("column") || fullError.code === "PGRST204")) {
                 console.warn("DB Schema mismatch: GCash columns missing. Falling back...");
@@ -672,31 +746,52 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(false);
         }
     };
-    const updateUserRole = async (userId: string, newRole: "Admin" | "Staff" | "Boarder") => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can manage users"); return; }
+    const updateUserRole = async (userId: string, newRole: UserRole) => {
+        const isSuper = user?.role === "SuperAdmin";
+        const isAdmin = user?.role === "Admin";
+        if (!isSuper && !isAdmin) { toast.error("Unauthorized"); return; }
+        
         const target = profiles.find(p => p.id === userId);
-        if (target && (target.username === "admin" || target.username === "staff")) {
+        if (target && (target.username === "superadmin" || target.username === "admin" || target.username === "staff")) {
             toast.error("Cannot change role of protected system accounts.");
             return;
         }
-        const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
+        
+        if (isAdmin && (newRole === "SuperAdmin" || newRole === "Admin")) {
+             toast.error("Admins cannot promote users to Admin or SuperAdmin.");
+             return;
+        }
+
+        const { error } = await supabase.from("accounts").update({ role: newRole }).eq("id", userId);
         if (error) { toast.error("Failed to update user role"); return; }
         toast.success(`User role updated to ${newRole}`);
         addLog("User Role Updated", "User", userId, `Role changed to ${newRole}`);
         refreshData();
     };
 
-    const addUser = async (profile: { username: string; fullName: string; role: "Admin" | "Staff" | "Boarder"; boarderId?: string }) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can create accounts"); return; }
+    const addUser = async (profile: { username: string; fullName: string; role: UserRole; boarderId?: string; createdBy?: string }) => {
+        const isSuper = user?.role === "SuperAdmin";
+        const isAdmin = user?.role === "Admin";
+        if (!isSuper && !isAdmin) { toast.error("Unauthorized"); return; }
+        
+        if (isAdmin && (profile.role === "SuperAdmin" || profile.role === "Admin")) {
+            toast.error("Admins cannot create other admins or superadmins.");
+            return;
+        }
+
         const usernameClean = profile.username.trim().toLowerCase();
         if (!usernameClean) { toast.error("Username is required"); return; }
         const id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const { error } = await supabase.from("profiles").insert([{
+        
+        const createdBy = profile.createdBy || user?.id;
+
+        const { error } = await supabase.from("accounts").insert([{
             id,
             username: usernameClean,
             full_name: profile.fullName.trim(),
             role: profile.role,
             boarder_id: profile.boarderId || null,
+            created_by: createdBy
         }]);
         if (error) {
             if (error.code === "23505") toast.error("That username is already taken.");
@@ -706,17 +801,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         toast.success(`Account created. Login with username "${usernameClean}" (password same as username).`);
         addLog("Account Created", "User", id, `${profile.fullName} (${profile.role})`);
         refreshData();
+        return { ...profile, id };
     };
 
     const deleteUser = async (userId: string) => {
-        if (user?.role !== "Admin") { toast.error("Unauthorized: Only admins can delete accounts"); return; }
+        const isSuper = user?.role === "SuperAdmin";
+        const isAdmin = user?.role === "Admin";
+        if (!isSuper && !isAdmin) { toast.error("Unauthorized"); return; }
+        
         if (userId === user?.id) { toast.error("You cannot delete your own account"); return; }
         const target = profiles.find(p => p.id === userId);
-        if (target && (target.username === "admin" || target.username === "staff")) {
-            toast.error("Cannot delete protected system accounts.");
+        
+        if (target && target.username === "superadmin") {
+            toast.error("Cannot delete the system superadmin account.");
             return;
         }
-        const { error } = await supabase.from("profiles").delete().eq("id", userId);
+
+        const { error } = await supabase.from("accounts").delete().eq("id", userId);
         if (error) { toast.error("Failed to delete account"); return; }
         toast.success("Account deleted");
         addLog("Account Deleted", "User", userId, "User account removed.");
@@ -731,9 +832,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (data.address !== undefined) payload.address = data.address;
         if (data.profilePhoto !== undefined) payload.profile_photo = data.profilePhoto;
         if (data.emergencyContact !== undefined) payload.emergency_contact = data.emergencyContact;
+        if (data.profilePhoto !== undefined) payload.profilePhoto = data.profilePhoto; // Changed from profile_photo
+        if (data.emergencyContact !== undefined) payload.emergencyContact = data.emergencyContact; // Changed from emergency_contact
         if (Object.keys(payload).length === 0) return;
-        const { error } = await supabase.from("profiles").update(payload).eq("id", userId);
-        if (error) { toast.error("Failed to update profile"); return; }
+        
+        let targetId = userId;
+        // If using mock ID 'sa1', try to find real ID first
+        if (userId === "sa1") {
+            const { data: realProf } = await supabase.from("accounts").select("id").eq("username", "superadmin").maybeSingle(); // Changed from profiles
+            if (realProf) targetId = realProf.id;
+        }
+
+        const { error } = await supabase.from("accounts").update(payload).eq("id", targetId).select(); // Changed from profiles
+        
+        if (error) { 
+            toast.error("Failed to update profile: " + error.message); 
+            return; 
+        }
+        
+        if (!error && (!targetId || targetId === "sa1")) {
+             // If still mock or no update happened, it might be the first save ever
+             // We could attempt an insert but for now just warn
+             console.warn("Update profile target not found in DB");
+        }
+
         toast.success("Profile updated");
         addLog("Profile Updated", "User", userId, "Personal account data updated.");
         await refreshData();

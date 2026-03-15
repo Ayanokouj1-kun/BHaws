@@ -11,6 +11,7 @@ export interface Room {
   floor?: number;
   amenities?: string[];
   description?: string;
+  adminId?: string; // Owner Admin
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +41,7 @@ export interface Boarder {
   profilePhoto?: string;
   occupation?: string;
   gender?: "Male" | "Female" | "Other";
+  adminId?: string; // Owner Admin
   createdAt: string;
 }
 
@@ -58,6 +60,7 @@ export interface Payment {
   lateFee?: number;
   receiptNumber?: string;
   notes?: string;
+  adminId?: string; // Owner Admin
   createdAt?: string;
 }
 
@@ -81,6 +84,7 @@ export interface MaintenanceRequest {
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "Open" | "In Progress" | "Resolved" | "Closed";
   images?: string[];
+  adminId?: string; // Owner Admin
   createdAt: string;
   resolvedAt?: string;
 }
@@ -93,6 +97,7 @@ export interface Expense {
   date: string;
   paidBy: string;
   receiptRef?: string;
+  adminId?: string; // Owner Admin
 }
 
 export interface Announcement {
@@ -100,6 +105,7 @@ export interface Announcement {
   title: string;
   message: string;
   priority: "Normal" | "Important" | "Urgent";
+  adminId?: string; // Owner Admin (or null for global/SuperAdmin)
   createdAt: string;
   expiresAt?: string;
 }
@@ -113,7 +119,7 @@ export interface DashboardStats {
   unpaidPayments: number;
 }
 
-export type UserRole = "Admin" | "Staff" | "Boarder";
+export type UserRole = "SuperAdmin" | "Admin" | "Staff" | "Boarder";
 
 export interface User {
   id: string;
@@ -121,6 +127,7 @@ export interface User {
   fullName: string;
   role: UserRole;
   boarderId?: string; // Links to Boarder profile if role is 'Boarder'
+  createdBy?: string; // ID of the Admin who created this user
   /** Personalized account data (stored in profiles) */
   email?: string;
   phone?: string;
@@ -143,4 +150,5 @@ export interface BhSettings {
   gracePeriodDays?: number;
   gcashNumber?: string;
   gcashQRCode?: string;
+  adminId?: string;
 }

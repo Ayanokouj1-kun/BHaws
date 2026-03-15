@@ -32,18 +32,18 @@ export function AppSidebar() {
 
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Rooms", url: "/rooms", icon: DoorOpen, roles: ["Admin", "Staff"] },
-    { title: "Boarders", url: "/boarders", icon: Users, roles: ["Admin", "Staff"] },
+    { title: "Rooms", url: "/rooms", icon: DoorOpen, roles: ["SuperAdmin", "Admin", "Staff"] },
+    { title: "Boarders", url: "/boarders", icon: Users, roles: ["SuperAdmin", "Admin", "Staff"] },
     { title: "Payments", url: "/payments", icon: CreditCard },
     { title: "Maintenance", url: "/maintenance", icon: Wrench },
-    { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin", "Staff"] },
+    { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["SuperAdmin", "Admin", "Staff"] },
   ].filter(item => !item.roles || item.roles.includes(role));
 
   const systemItems = [
-    { title: "Accounts", url: "/accounts", icon: UserCog, roles: ["Admin"] },
-    { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["Admin", "Staff"] },
-    { title: "Audit Logs", url: "/audit-logs", icon: ClipboardList, roles: ["Admin"] },
-    { title: "Settings", url: "/settings", icon: Settings, roles: ["Admin"] },
+    { title: "Accounts", url: "/accounts", icon: UserCog, roles: ["SuperAdmin", "Admin"] },
+    { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["SuperAdmin", "Admin", "Staff"] },
+    { title: "Audit Logs", url: "/audit-logs", icon: ClipboardList, roles: ["SuperAdmin", "Admin"] },
+    { title: "Settings", url: "/settings", icon: Settings, roles: ["SuperAdmin", "Admin"] },
   ].filter(item => !item.roles || item.roles.includes(role));
 
   return (

@@ -35,4 +35,5 @@ dist-ssr
 *_report.txt
 *_output.txt
 eslint_formatted.txt
-eslint_formatted_ascii.txt
+# Vite
+vite.config.ts.timestamp-*

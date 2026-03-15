@@ -57,15 +57,15 @@ const App = () => (
               />
               <Route
                 path="/rooms"
-                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><RoomsPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin", "Staff"]}><RoomsPage /></ProtectedRoute>}
               />
               <Route
                 path="/rooms/:id"
-                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><RoomDetails /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin", "Staff"]}><RoomDetails /></ProtectedRoute>}
               />
               <Route
                 path="/boarders"
-                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><BoardersPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin", "Staff"]}><BoardersPage /></ProtectedRoute>}
               />
               <Route
                 path="/boarders/:id"
@@ -81,23 +81,23 @@ const App = () => (
               />
               <Route
                 path="/expenses"
-                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><ExpensesPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin", "Staff"]}><ExpensesPage /></ProtectedRoute>}
               />
               <Route
                 path="/reports"
-                element={<ProtectedRoute allowedRoles={["Admin", "Staff"]}><ReportsPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin", "Staff"]}><ReportsPage /></ProtectedRoute>}
               />
               <Route
                 path="/audit-logs"
-                element={<ProtectedRoute allowedRoles={["Admin"]}><AuditLogsPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin"]}><AuditLogsPage /></ProtectedRoute>}
               />
               <Route
                 path="/settings"
-                element={<ProtectedRoute allowedRoles={["Admin"]}><SettingsPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin"]}><SettingsPage /></ProtectedRoute>}
               />
               <Route
                 path="/accounts"
-                element={<ProtectedRoute allowedRoles={["Admin"]}><AccountsPage /></ProtectedRoute>}
+                element={<ProtectedRoute allowedRoles={["SuperAdmin", "Admin"]}><AccountsPage /></ProtectedRoute>}
               />
               <Route
                 path="/account"

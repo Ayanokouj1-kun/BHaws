@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const BoardersPage = () => {
-  const { boarders, rooms, addBoarder, updateBoarder, deleteBoarder, isLoading, user } = useData();
+  const { boarders, rooms, profiles, addBoarder, updateBoarder, deleteBoarder, addUser, isLoading, user } = useData();
   const isAdmin = user?.role === "Admin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -36,6 +36,8 @@ const BoardersPage = () => {
     depositAmount: 0,
     status: "Active",
     profilePhoto: "",
+    createAccount: false,
+    username: "",
   });
 
   const navigate = useNavigate();
@@ -90,6 +92,8 @@ const BoardersPage = () => {
       moveInDate: new Date().toISOString().split('T')[0],
       advanceAmount: 0, depositAmount: 0, status: "Active",
       profilePhoto: "",
+      createAccount: false,
+      username: "",
     });
     setIsDialogOpen(true);
   };
@@ -112,7 +116,16 @@ const BoardersPage = () => {
         id: `bo${Date.now()}`,
         createdAt: new Date().toISOString().split('T')[0],
       };
-      addBoarder(boarder);
+      addBoarder(boarder).then((nb) => {
+        if (currentBoarder.createAccount && currentBoarder.username && nb) {
+          addUser({
+            username: currentBoarder.username,
+            fullName: boarder.fullName,
+            role: "Boarder",
+            boarderId: nb.id,
+          });
+        }
+      });
       toast.success("Boarder registered successfully");
     } else {
       updateBoarder(currentBoarder as Boarder);
@@ -217,6 +230,12 @@ const BoardersPage = () => {
                         <p className="text-[10px] text-muted-foreground uppercase tracking-tight flex items-center gap-1 mt-0.5">
                           <Calendar className="h-3 w-3" /> In: {b.moveInDate}
                         </p>
+                        {profiles.some(p => p.boarderId === b.id) && (
+                           <div className="flex items-center gap-1 mt-1">
+                             <ShieldCheck className="h-2.5 w-2.5 text-success" />
+                             <span className="text-[8px] font-bold text-success uppercase tracking-wider">Has Login Account</span>
+                           </div>
+                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -503,18 +522,38 @@ const BoardersPage = () => {
                     placeholder="City, Province"
                     className="h-9 px-3 text-xs bg-card"
                   />
+                  </div>
                 </div>
 
-                <div className="grid gap-1.5">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Emergency Contact</Label>
-                  <Input
-                    value={currentBoarder.emergencyContact}
-                    onChange={(e) => setCurrentBoarder({ ...currentBoarder, emergencyContact: e.target.value })}
-                    placeholder="Name / Number"
-                    className="h-9 px-3 text-xs bg-card"
-                  />
-                </div>
-              </div>
+                {mode === "add" && (
+
+                  <div className="space-y-3 p-3 rounded-xl border border-accent/20 bg-accent/5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-accent flex items-center gap-1.5">
+                        <Lock className="h-3 w-3" /> System Account
+                      </Label>
+                      <input 
+                        type="checkbox" 
+                        checked={currentBoarder.createAccount} 
+                        onChange={(e) => setCurrentBoarder({...currentBoarder, createAccount: e.target.checked})}
+                        className="rounded border-border"
+                      />
+                    </div>
+                    {currentBoarder.createAccount && (
+                      <div className="grid gap-1.5 animate-in fade-in slide-in-from-top-1">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Login Username</Label>
+                        <Input 
+                          placeholder="e.g. juan123" 
+                          value={currentBoarder.username}
+                          onChange={(e) => setCurrentBoarder({...currentBoarder, username: e.target.value})}
+                          className="h-8 text-xs bg-card"
+                        />
+                        <p className="text-[8px] text-muted-foreground">Default password will be the same as username.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
 
               <div className="border-t border-border/40" />
 
@@ -590,11 +629,12 @@ const BoardersPage = () => {
                     ⚠ Deposit is below room rate — ₱{(selectedRoom.monthlyRate - (currentBoarder.depositAmount ?? 0)).toLocaleString()} short
                   </p>
                 )}
-              </div>
             </div>
           </div>
+        </div>
 
           {/* Footer */}
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 py-3 border-t border-border/50 bg-muted/10">
             <p className="text-[10px] text-muted-foreground">Fields marked * are required</p>
             <div className="flex gap-2 w-full sm:w-auto">
