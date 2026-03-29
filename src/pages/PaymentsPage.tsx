@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Printer, Trash2, Edit, Hash, Lock, CalendarDays, CreditCard, Banknote, User, FileText, AlertCircle, Eye, Smartphone, QrCode, Copy, Check, Maximize2 } from "lucide-react";
+import { Search, Plus, Printer, Trash2, Edit, Hash, Lock, CalendarDays, CreditCard, Banknote, User, FileText, AlertCircle, Eye, Smartphone, QrCode, Copy, Check, Maximize2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -936,56 +936,74 @@ const PaymentsPage = () => {
       )}
       {/* GCash Payment Modal — Refined Small & Informative Version */}
       <Dialog open={payModalOpen} onOpenChange={setPayModalOpen}>
-        <DialogContent className="max-w-[320px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-card">
-          <div className="p-5 space-y-5">
+        <DialogContent className="max-w-[280px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-card">
+          <div className="p-4 space-y-3">
             {/* Minimal Header */}
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
-                <Smartphone className="h-5 w-5 text-white" />
+              <div className="h-8 w-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
+                <Smartphone className="h-4 w-4 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-sm font-bold text-foreground">GCash Payment</DialogTitle>
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{settings.name || "BHaws Residences"}</p>
+                <DialogTitle className="text-xs font-bold text-foreground">GCash Payment</DialogTitle>
+                <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider">{settings.name || "BHaws Residences"}</p>
               </div>
             </div>
 
             {/* QR Section */}
-            <div className="bg-muted/30 rounded-2xl p-4 border border-border/40 space-y-4">
+            <div className="bg-muted/30 rounded-xl p-3 border border-border/40 space-y-2">
               <div
-                className="aspect-square w-40 mx-auto bg-white rounded-xl shadow-inner border border-border/20 p-2 relative group cursor-zoom-in active:scale-95 transition-transform"
+                className="aspect-square w-28 mx-auto bg-white rounded-lg shadow-inner border border-border/20 p-1.5 relative group cursor-zoom-in active:scale-95 transition-transform"
                 onClick={() => settings.gcashQRCode && setQrZoomed(true)}
               >
                 {settings.gcashQRCode ? (
                   <>
                     <img src={settings.gcashQRCode} alt="QR" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                      <Maximize2 className="h-5 w-5 text-blue-600" />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                      <Maximize2 className="h-4 w-4 text-blue-600" />
                     </div>
                   </>
                 ) : (
                   <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground/30 gap-1">
-                    <QrCode className="h-8 w-8" />
+                    <QrCode className="h-6 w-6" />
                     <span className="text-[8px] font-bold uppercase">No QR</span>
                   </div>
                 )}
               </div>
 
               {settings.gcashQRCode && (
-                <p className="text-[9px] text-center text-blue-600/60 font-medium animate-pulse">Tap QR to enlarge for scanning</p>
+                <p className="text-[9px] text-center text-blue-600/60 font-medium animate-pulse">Tap to enlarge</p>
+              )}
+
+              {/* Download QR Button */}
+              {settings.gcashQRCode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-7 rounded-lg border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 text-[10px] font-bold gap-1.5"
+                  onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = settings.gcashQRCode!;
+                    a.download = "gcash-qr.png";
+                    a.click();
+                    toast.success("QR Code downloaded!");
+                  }}
+                >
+                  <Download className="h-3 w-3" /> Download QR
+                </Button>
               )}
 
               {/* Number Section */}
-              <div className="text-center space-y-1">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Account Number</p>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-lg font-bold font-mono tracking-tight text-foreground select-all">
+              <div className="text-center space-y-0.5">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Account Number</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className="text-base font-bold font-mono tracking-tight text-foreground select-all">
                     {settings.gcashNumber || "09XX XXX XXXX"}
                   </span>
                   {settings.gcashNumber && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-blue-600/10 hover:text-blue-600"
+                      className="h-6 w-6 rounded-lg hover:bg-blue-600/10 hover:text-blue-600"
                       onClick={() => {
                         navigator.clipboard.writeText(settings.gcashNumber!);
                         setCopied(true);
@@ -993,7 +1011,7 @@ const PaymentsPage = () => {
                         setTimeout(() => setCopied(false), 2000);
                       }}
                     >
-                      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   )}
                 </div>
@@ -1001,15 +1019,15 @@ const PaymentsPage = () => {
             </div>
 
             {/* Hint */}
-            <div className="flex gap-2.5 p-3 rounded-xl bg-blue-50/50 border border-blue-100/50">
-              <AlertCircle className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] leading-relaxed text-blue-700 font-medium">
+            <div className="flex gap-2 p-2.5 rounded-lg bg-blue-50/50 border border-blue-100/50">
+              <AlertCircle className="h-3 w-3 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-[9px] leading-relaxed text-blue-700 font-medium">
                 Save the receipt and send it to your administrator for verification.
               </p>
             </div>
 
             <Button
-              className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+              className="w-full h-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
               onClick={() => setPayModalOpen(false)}
             >
               Close
@@ -1040,6 +1058,22 @@ const PaymentsPage = () => {
                 <p className="text-[10px] text-center text-muted-foreground mt-4 font-medium italic">
                   Aim your phone camera at the screen to scan.
                 </p>
+                {/* Download inside zoom view */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3 h-8 rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 text-[11px] font-bold gap-2"
+                  onClick={e => {
+                    e.stopPropagation();
+                    const a = document.createElement("a");
+                    a.href = settings.gcashQRCode!;
+                    a.download = "gcash-qr.png";
+                    a.click();
+                    toast.success("QR Code downloaded!");
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Download QR
+                </Button>
               </div>
               <Button
                 variant="outline"

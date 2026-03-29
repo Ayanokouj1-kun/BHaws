@@ -34,8 +34,8 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Rooms", url: "/rooms", icon: DoorOpen, roles: ["SuperAdmin", "Admin", "Staff"] },
     { title: "Boarders", url: "/boarders", icon: Users, roles: ["SuperAdmin", "Admin", "Staff"] },
-    { title: "Payments", url: "/payments", icon: CreditCard },
-    { title: "Maintenance", url: "/maintenance", icon: Wrench },
+    { title: "Payments", url: "/payments", icon: CreditCard, roles: ["SuperAdmin", "Admin", "Staff", "Boarder"] },
+    { title: "Maintenance", url: "/maintenance", icon: Wrench, roles: ["SuperAdmin", "Admin", "Staff", "Boarder"] },
     { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["SuperAdmin", "Admin", "Staff"] },
   ].filter(item => !item.roles || item.roles.includes(role));
 

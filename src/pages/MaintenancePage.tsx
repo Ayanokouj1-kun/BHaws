@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Wrench, AlertCircle, Clock, CheckCircle2, XCircle, Search, Trash2, Edit, Droplets, Zap, Home, Tv, Hammer, ImagePlus, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Wrench, AlertCircle, Clock, CheckCircle2, XCircle, Search, Trash2, Edit, Droplets, Zap, Home, Tv, Hammer, ImagePlus, X, Image as ImageIcon, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { MaintenanceRequest } from "@/types";
 
 const priorityColors: Record<string, string> = {
@@ -72,6 +72,32 @@ const MaintenancePage = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [mode, setMode] = useState<"add" | "edit">("add");
     const [current, setCurrent] = useState<Partial<MaintenanceRequest>>(emptyForm());
+
+    // View Details modal
+    const [viewReq, setViewReq] = useState<MaintenanceRequest | null>(null);
+    const [isViewOpen, setIsViewOpen] = useState(false);
+
+    // Lightbox
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+
+    const openLightbox = (images: string[], index: number) => {
+        setLightboxImages(images);
+        setLightboxIndex(index);
+        setLightboxSrc(images[index]);
+    };
+    const closeLightbox = () => setLightboxSrc(null);
+    const lightboxPrev = () => {
+        const newIdx = (lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+        setLightboxIndex(newIdx);
+        setLightboxSrc(lightboxImages[newIdx]);
+    };
+    const lightboxNext = () => {
+        const newIdx = (lightboxIndex + 1) % lightboxImages.length;
+        setLightboxIndex(newIdx);
+        setLightboxSrc(lightboxImages[newIdx]);
+    };
 
     const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
     const isStaff = user?.role === "Staff";
@@ -311,6 +337,15 @@ const MaintenancePage = () => {
                                             <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{req.createdAt}</TableCell>
                                             <TableCell className="text-right whitespace-nowrap">
                                                 <div className="flex gap-1 items-center justify-end flex-nowrap">
+                                                    {/* Show button — always visible */}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 text-xs gap-1 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors"
+                                                        onClick={() => { setViewReq(req); setIsViewOpen(true); }}
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5" /> Show
+                                                    </Button>
                                                     {!isBoarder && req.status === "Open" && (
                                                         <Button size="sm" variant="ghost" className="h-8 text-xs text-warning hover:bg-warning/5" onClick={() => handleQuickStatus(req, "In Progress")}>
                                                             Start
@@ -348,6 +383,153 @@ const MaintenancePage = () => {
                 </div>
             </div>
 
+            {/* ── View Details Modal ── */}
+            <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            {viewReq && (() => { const Icon = categoryIcons[viewReq.category || "Other"]; return <Icon className="h-4 w-4" />; })()}
+                            {viewReq?.title}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {viewReq && (
+                        <div className="space-y-5 py-2">
+                            {/* Badges row */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${statusColors[viewReq.status]}`}>
+                                    <span className="mr-1 scale-90">{statusIcons[viewReq.status]}</span>
+                                    {viewReq.status}
+                                </Badge>
+                                <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${priorityColors[viewReq.priority]}`}>
+                                    {viewReq.priority}
+                                </Badge>
+                                <Badge variant="outline" className={`text-[9px] font-bold uppercase px-2 py-0.5 h-6 ${categoryColors[viewReq.category || "Other"]}`}>
+                                    {viewReq.category || "Other"}
+                                </Badge>
+                            </div>
+
+                            {/* Meta info */}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Room</p>
+                                    <p className="font-semibold text-foreground">{getRoomName(viewReq.roomId)}</p>
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date Filed</p>
+                                    <p className="font-semibold text-foreground">{viewReq.createdAt}</p>
+                                </div>
+                                {viewReq.resolvedAt && (
+                                    <div className="space-y-0.5 col-span-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resolved On</p>
+                                        <p className="font-semibold text-success">{viewReq.resolvedAt}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Issue Description */}
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Issue Description</p>
+                                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{viewReq.description}</p>
+                                </div>
+                            </div>
+
+                            {/* Photos */}
+                            {viewReq.images && viewReq.images.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                        <ImageIcon className="h-3.5 w-3.5" /> Attached Photos ({viewReq.images.length})
+                                    </p>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {viewReq.images.map((img, idx) => (
+                                            <button
+                                                key={idx}
+                                                className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group cursor-zoom-in"
+                                                onClick={() => openLightbox(viewReq.images!, idx)}
+                                            >
+                                                <img src={img} className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" alt={`Photo ${idx + 1}`} />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                                                    <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground text-center">Click a photo to view fullscreen</p>
+                                </div>
+                            )}
+
+                            {(!viewReq.images || viewReq.images.length === 0) && (
+                                <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-border text-muted-foreground">
+                                    <ImageIcon className="h-4 w-4" />
+                                    <p className="text-xs italic">No photos attached to this request.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsViewOpen(false)}>Close</Button>
+                        {!isBoarder && viewReq && (
+                            <Button onClick={() => { setIsViewOpen(false); handleEdit(viewReq); }}>
+                                <Edit className="h-3.5 w-3.5 mr-1" /> Edit Request
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Lightbox ── */}
+            {lightboxSrc && (
+                <div
+                    className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center"
+                    onClick={closeLightbox}
+                >
+                    {/* Prev */}
+                    {lightboxImages.length > 1 && (
+                        <button
+                            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/25 transition-colors text-white z-10"
+                            onClick={e => { e.stopPropagation(); lightboxPrev(); }}
+                        >
+                            <ChevronLeft className="h-6 w-6" />
+                        </button>
+                    )}
+
+                    <img
+                        src={lightboxSrc}
+                        className="max-h-[88vh] max-w-[90vw] rounded-lg shadow-2xl object-contain"
+                        alt="Fullscreen photo"
+                        onClick={e => e.stopPropagation()}
+                    />
+
+                    {/* Next */}
+                    {lightboxImages.length > 1 && (
+                        <button
+                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/25 transition-colors text-white z-10"
+                            onClick={e => { e.stopPropagation(); lightboxNext(); }}
+                        >
+                            <ChevronRight className="h-6 w-6" />
+                        </button>
+                    )}
+
+                    {/* Close */}
+                    <button
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/25 transition-colors text-white"
+                        onClick={closeLightbox}
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+
+                    {/* Counter */}
+                    {lightboxImages.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 text-white text-xs font-bold">
+                            {lightboxIndex + 1} / {lightboxImages.length}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Add / Edit Dialog ── */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>

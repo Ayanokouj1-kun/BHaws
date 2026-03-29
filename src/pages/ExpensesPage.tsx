@@ -524,7 +524,8 @@ const ExpensesPage = () => {
                                 <Label>Amount (₱) *</Label>
                                 <Input
                                     type="number"
-                                    value={current.amount}
+                                    value={current.amount || ""}
+                                    placeholder="0"
                                     onChange={e => setCurrent({ ...current, amount: Number(e.target.value) })}
                                 />
                             </div>

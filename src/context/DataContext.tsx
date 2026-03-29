@@ -99,18 +99,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
             const getAdminIdFilter = () => {
                 if (!user) return null;
-                // Both Admin and SuperAdmin manage their own separate data silos
-                if (user.role === "SuperAdmin" || user.role === "Admin") return user.id;
+                // SuperAdmin and Admin each have their own isolated data silo — filter strictly by their own user.id
+                if (user.role === "SuperAdmin" || user.role === "Admin") return user.id || null;
                 // Staff/Boarders see their manager's data
                 return user.createdBy || null;
             };
 
             const adminFilter = getAdminIdFilter();
 
-            const safeSelect = async (table: string, query = "*") => {
+            // Always apply a strict filter — NEVER fall back to unfiltered "see everything" queries
+            const filteredSelect = async (table: string, query = "*") => {
                 let q = supabase.from(table).select(query);
-                if (adminFilter && table !== "settings" && table !== "profiles" && table !== "announcements") {
+                if (adminFilter) {
                     q = q.eq("admin_id", adminFilter);
+                } else {
+                    // No valid admin context — return empty to prevent data leaks
+                    return [];
                 }
                 const { data, error } = await q as any;
                 if (error) { console.warn(`[Sync] ${table}:`, error.message); return null; }
@@ -119,23 +123,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
             const [roomsRes, boardersRes, paymentsRes, logsRes, settingsRes, maintRes, expRes, annRes, profRes] =
                 await Promise.all([
-                    adminFilter 
+                    // Rooms — always filter by adminFilter
+                    adminFilter
                         ? supabase.from("rooms").select("*, beds(*)").eq("admin_id", adminFilter)
-                        : supabase.from("rooms").select("*, beds(*)"),
+                        : { data: [] },
+                    // Boarders — always filter by adminFilter
                     adminFilter
                         ? supabase.from("boarders").select("*").eq("admin_id", adminFilter).order("created_at", { ascending: true })
-                        : supabase.from("boarders").select("*").order("created_at", { ascending: true }),
-                    safeSelect("payments"),
+                        : { data: [] },
+                    // Payments — filter via filteredSelect
+                    filteredSelect("payments"),
+                    // Audit Logs — always filter by adminFilter
                     adminFilter
                         ? supabase.from("audit_logs").select("*").eq("admin_id", adminFilter).order("timestamp", { ascending: false })
-                        : supabase.from("audit_logs").select("*").order("timestamp", { ascending: false }),
+                        : { data: [] },
+                    // Settings — fetch by the admin's own ID
                     supabase.from("settings").select("*").eq("admin_id", adminFilter || (user?.id || "")).maybeSingle(),
-                    safeSelect("maintenance_requests"),
-                    safeSelect("expenses"),
-                    adminFilter 
+                    // Maintenance & Expenses — filtered
+                    filteredSelect("maintenance_requests"),
+                    filteredSelect("expenses"),
+                    // Announcements — show global (null admin_id) + own
+                    adminFilter
                         ? supabase.from("announcements").select("*").or(`admin_id.is.null,admin_id.eq.${adminFilter}`)
-                        : supabase.from("announcements").select("*"), 
-                    adminFilter 
+                        : supabase.from("announcements").select("*").is("admin_id", null),
+                    // Profiles — own profile + staff/boarders created under this admin
+                    adminFilter
                         ? supabase.from("profiles").select("*").or(`id.eq.${user?.id},created_by.eq.${adminFilter}`)
                         : supabase.from("profiles").select("*").eq("id", user?.id || "")
                 ]);
@@ -651,6 +663,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase.from("expenses").insert([{
             category: expense.category, description: expense.description,
             amount: expense.amount, date: expense.date, paid_by: expense.paidBy,
+            receipt_ref: expense.receiptRef || null,
             admin_id: adminId
         }]);
         if (error) toast.error("Failed to record expense");
@@ -664,7 +677,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const updateExpense = async (expense: Expense) => {
         await supabase.from("expenses").update({
             category: expense.category, description: expense.description,
-            amount: expense.amount, date: expense.date, paid_by: expense.paidBy
+            amount: expense.amount, date: expense.date, paid_by: expense.paidBy,
+            receipt_ref: expense.receiptRef || null
         }).eq("id", expense.id);
         refreshData();
     };

@@ -28,12 +28,19 @@ const statusBadgeClass = (s: string) => {
 const RoomDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { rooms, boarders, isLoading } = useData();
+    const { rooms, boarders, maintenance, isLoading } = useData();
 
     const room = rooms.find((r) => r.id === id);
     const liveStatus = room ? computeRoomStatus(room.beds, !!room.underMaintenance) : "Available";
     const occupiedCount = room?.beds.filter(b => b.status === "Occupied").length || 0;
     const occupancyRate = room ? Math.round((occupiedCount / room.capacity) * 100) : 0;
+
+    // Live maintenance data for this room
+    const roomMaintenance = maintenance
+        .filter(m => m.roomId === id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const openIssues = roomMaintenance.filter(m => m.status === "Open" || m.status === "In Progress").length;
+    const lastRequest = roomMaintenance[0];
 
     if (isLoading) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div></AppLayout>;
     if (!room) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Room not found</div></AppLayout>;
@@ -187,22 +194,78 @@ const RoomDetails = () => {
                                     <AlertCircle className="h-4 w-4" /> Room Compliance &amp; Maintenance
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
-                                        <span className="text-sm">Last Inspection</span>
-                                        <span className="text-sm font-semibold">October 15, 2023</span>
+                            <CardContent className="pt-5 space-y-4">
+                                {/* Live stats row */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Open Issues</p>
+                                        <p className={`text-xl font-black ${openIssues > 0 ? "text-destructive" : "text-success"}`}>{openIssues}</p>
                                     </div>
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
-                                        <span className="text-sm">Utility Meter Access</span>
-                                        <Badge variant="outline">Shared (Hallway 2)</Badge>
+                                    <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Total Requests</p>
+                                        <p className="text-xl font-black text-foreground">{roomMaintenance.length}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-muted/30 border border-border/30 text-center">
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Maintenance</p>
+                                        <p className={`text-[11px] font-black mt-1 ${room.underMaintenance ? "text-orange-500" : "text-success"}`}>
+                                            {room.underMaintenance ? "LOCKED" : "ACTIVE"}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3 mt-6 pt-6 border-t border-border/40">
-                                    <Info className="h-4 w-4 text-accent mt-0.5" />
+
+                                {/* Last maintenance date */}
+                                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
+                                    <span className="text-sm text-muted-foreground">Last Request Filed</span>
+                                    <span className="text-sm font-semibold">
+                                        {lastRequest ? lastRequest.createdAt : <span className="text-muted-foreground italic text-xs">No requests yet</span>}
+                                    </span>
+                                </div>
+
+                                {/* Last resolved date */}
+                                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
+                                    <span className="text-sm text-muted-foreground">Last Resolved</span>
+                                    <span className="text-sm font-semibold">
+                                        {roomMaintenance.find(m => m.status === "Resolved" || m.status === "Closed")?.resolvedAt
+                                            ?? <span className="text-muted-foreground italic text-xs">None resolved yet</span>}
+                                    </span>
+                                </div>
+
+                                {/* Recent maintenance list */}
+                                {roomMaintenance.length > 0 ? (
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recent Requests</p>
+                                        {roomMaintenance.slice(0, 4).map(m => (
+                                            <div key={m.id} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border/40 bg-muted/10">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-semibold text-foreground truncate">{m.title}</p>
+                                                    <p className="text-[10px] text-muted-foreground">{m.createdAt} · {m.priority}</p>
+                                                </div>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`shrink-0 text-[9px] font-bold uppercase px-2 h-5 ${
+                                                        m.status === "Open" ? "bg-accent/10 text-accent border-accent/20"
+                                                        : m.status === "In Progress" ? "bg-warning/10 text-warning border-warning/20"
+                                                        : m.status === "Resolved" ? "bg-success/10 text-success border-success/20"
+                                                        : "bg-muted text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {m.status}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-border text-muted-foreground">
+                                        <Info className="h-4 w-4 shrink-0" />
+                                        <p className="text-xs italic">No maintenance requests filed for this room.</p>
+                                    </div>
+                                )}
+
+                                <div className="flex items-start gap-3 pt-4 border-t border-border/40">
+                                    <Info className="h-4 w-4 text-accent mt-0.5 shrink-0" />
                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                         Room status is <strong>automatically computed</strong> from bed occupancy.
-                                        Toggle <em>Maintenance Mode</em> above to override it — this marks the room
+                                        Toggle <em>Maintenance Mode</em> in the Rooms list to override it — this marks the room
                                         as unavailable regardless of bed records.
                                     </p>
                                 </div>

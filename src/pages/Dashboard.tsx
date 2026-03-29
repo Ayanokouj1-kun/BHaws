@@ -10,6 +10,8 @@ import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend,
+  PieChart, Pie, Cell, RadialBarChart, RadialBar,
+  LineChart, Line, ReferenceLine,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +114,110 @@ const Dashboard = () => {
     { label: "Pending", value: payments.filter(p => p.status === "Pending").length, fill: "hsl(var(--warning))" },
     { label: "Overdue", value: payments.filter(p => p.status === "Overdue").length, fill: "hsl(var(--destructive))" },
   ], [payments]);
+
+  // ── SMART ANALYTICS DATA ─────────────────────────────────────────────────
+
+  // 1. Revenue Forecast — linear regression on monthly income, project 3 months ahead
+  const forecastData = useMemo(() => {
+    if (chartData.length < 2) return [];
+    const n = chartData.length;
+    const xs = chartData.map((_, i) => i);
+    const ys = chartData.map(d => d.income);
+    const sumX = xs.reduce((a, b) => a + b, 0);
+    const sumY = ys.reduce((a, b) => a + b, 0);
+    const sumXY = xs.reduce((a, x, i) => a + x * ys[i], 0);
+    const sumX2 = xs.reduce((a, x) => a + x * x, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    const base = [...chartData.map((d, i) => ({ month: d.month, actual: d.income, forecast: Math.round(intercept + slope * i) }))];
+    const extraMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const lastIdx = MONTH_ORDER.indexOf(chartData[n - 1].month);
+    for (let i = 1; i <= 3; i++) {
+      const nextIdx = (lastIdx + i) % 12;
+      base.push({ month: extraMonths[nextIdx] + "*", actual: 0, forecast: Math.max(0, Math.round(intercept + slope * (n - 1 + i))) });
+    }
+    return base;
+  }, [chartData]);
+
+  // 2. Monthly occupancy trend
+  const occupancyTrend = useMemo(() => {
+    const map: Record<string, { active: number; inactive: number }> = {};
+    boarders.forEach(b => {
+      const key = b.moveInDate ? b.moveInDate.slice(0, 7) : "Unknown";
+      if (!map[key]) map[key] = { active: 0, inactive: 0 };
+      if (b.status === "Active") map[key].active++;
+      else map[key].inactive++;
+    });
+    return Object.entries(map)
+      .filter(([k]) => k !== "Unknown")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([month, vals]) => ({ month: month.slice(5) + " '" + month.slice(2, 4), ...vals, total: vals.active + vals.inactive }));
+  }, [boarders]);
+
+  // 3. Expense category pie
+  const expensePie = useMemo(() => {
+    const cats: Record<string, number> = {};
+    expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
+    const COLORS = ["hsl(var(--accent))","hsl(var(--warning))","hsl(var(--destructive))","hsl(var(--success))","hsl(220,70%,60%)", "hsl(280,60%,60%)"];
+    return Object.entries(cats).map(([name, value], i) => ({ name, value, fill: COLORS[i % COLORS.length] }));
+  }, [expenses]);
+
+  // 4. Boarder payment health — per boarder: paid vs overdue ratio
+  const boarderPaymentHealth = useMemo(() => {
+    return boarders
+      .filter(b => b.status === "Active")
+      .slice(0, 8)
+      .map(b => {
+        const bp = payments.filter(p => p.boarderId === b.id);
+        return {
+          name: b.fullName.split(" ")[0],
+          paid: bp.filter(p => p.status === "Paid").length,
+          pending: bp.filter(p => p.status === "Pending").length,
+          overdue: bp.filter(p => p.status === "Overdue").length,
+        };
+      })
+      .filter(d => d.paid + d.pending + d.overdue > 0);
+  }, [boarders, payments]);
+
+  // 5. Maintenance resolution efficiency (radial)
+  const maintenanceEfficiency = useMemo(() => {
+    const total = maintenance.length;
+    if (!total) return [];
+    const resolved = maintenance.filter(m => m.status === "Resolved" || m.status === "Closed").length;
+    const inProgress = maintenance.filter(m => m.status === "In Progress").length;
+    const open = maintenance.filter(m => m.status === "Open").length;
+    return [
+      { name: "Resolved", value: Math.round((resolved / total) * 100), fill: "hsl(var(--success))" },
+      { name: "In Progress", value: Math.round((inProgress / total) * 100), fill: "hsl(var(--warning))" },
+      { name: "Open", value: Math.round((open / total) * 100), fill: "hsl(var(--destructive))" },
+    ];
+  }, [maintenance]);
+
+  // AI insight generators
+  const revenueInsight = useMemo(() => {
+    if (forecastData.length < 4) return "Not enough data for prediction.";
+    const lastActual = forecastData.filter(d => d.actual > 0).at(-1)?.actual ?? 0;
+    const nextForecast = forecastData.find(d => d.month.includes("*"))?.forecast ?? 0;
+    const diff = nextForecast - lastActual;
+    if (diff > 0) return `📈 Revenue is trending upward. Next month is projected at ₱${nextForecast.toLocaleString()} (+₱${diff.toLocaleString()}).`;
+    if (diff < 0) return `📉 Revenue may dip next month to ₱${nextForecast.toLocaleString()}. Consider following up on pending payments.`;
+    return `➡️ Revenue is stable. Forecast for next month: ₱${nextForecast.toLocaleString()}.`;
+  }, [forecastData]);
+
+  const occupancyInsight = useMemo(() => {
+    const rate = stats.occupancyPct;
+    if (rate >= 90) return `🏠 Excellent occupancy at ${rate}%. Consider expanding capacity or raising rates.`;
+    if (rate >= 70) return `✅ Healthy occupancy at ${rate}%. ${stats.totalBeds - stats.occupiedBeds} bed(s) still available.`;
+    return `⚠️ Occupancy at ${rate}%. ${stats.totalBeds - stats.occupiedBeds} beds vacant — consider promotions to attract new boarders.`;
+  }, [stats]);
+
+  const overdueInsight = useMemo(() => {
+    const overdueRate = payments.length > 0 ? Math.round((stats.overdueCount / payments.length) * 100) : 0;
+    if (overdueRate === 0) return "✅ All payments are current. No overdue accounts detected.";
+    if (overdueRate < 15) return `⚡ ${overdueRate}% overdue rate — low risk. Send reminders to ${stats.overdueCount} boarder(s).`;
+    return `🚨 ${overdueRate}% overdue rate is high. ₱${stats.overdueTotal.toLocaleString()} at risk. Immediate follow-up recommended.`;
+  }, [payments, stats]);
 
   const getLogIcon = (entity: string) => {
     switch (entity) {
@@ -462,6 +568,227 @@ const Dashboard = () => {
                         <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
                       </div>
                     ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* ── Smart Analytics Section ──────────────────────────────── */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Smart Analytics & AI Insights</h2>
+                  <p className="text-xs text-muted-foreground">Auto-analysed from live payment, boarder & maintenance data</p>
+                </div>
+                <Badge variant="outline" className="ml-auto text-[10px] font-bold text-purple-600 border-purple-400/30 bg-purple-500/5">AI Powered</Badge>
+              </div>
+
+              {/* Row 1: Revenue Forecast + Occupancy Trend */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+                {/* Chart 1 — Revenue Forecast */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold">Revenue Forecast</CardTitle>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Actual income + 3-month AI projection</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] font-bold text-purple-600 border-purple-400/30 bg-purple-500/5">Predictive</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {forecastData.length < 2 ? (
+                      <div className="h-44 flex items-center justify-center text-sm text-muted-foreground italic">Record more payments to enable forecasting.</div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={170}>
+                          <LineChart data={forecastData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} dy={6} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} width={42} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                              formatter={(v: number, name: string) => [`₱${v.toLocaleString()}`, name === "actual" ? "Actual" : "AI Forecast"]}
+                            />
+                            <ReferenceLine x={forecastData.find(d => d.month.includes("*"))?.month} stroke="hsl(var(--border))" strokeDasharray="4 2" label={{ value: "Forecast", fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                            <Line type="monotone" dataKey="actual" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--accent))" }} activeDot={{ r: 5 }} connectNulls={false} />
+                            <Line type="monotone" dataKey="forecast" stroke="hsl(280,60%,60%)" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: "hsl(280,60%,60%)" }} activeDot={{ r: 5 }} />
+                            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} formatter={v => v === "actual" ? "Actual" : "AI Forecast"} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                        <div className="mt-2 p-2.5 rounded-lg bg-purple-500/5 border border-purple-400/20">
+                          <p className="text-[10px] text-purple-700 dark:text-purple-300 leading-relaxed">{revenueInsight}</p>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Chart 2 — Boarder Move-In Trend */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold">Boarder Move-In Trend</CardTitle>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Monthly new vs total boarders over time</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] font-bold text-accent border-accent/30 bg-accent/5">Live</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {occupancyTrend.length < 2 ? (
+                      <div className="h-44 flex items-center justify-center text-sm text-muted-foreground italic">Add boarders with move-in dates to see trends.</div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={170}>
+                          <AreaChart data={occupancyTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="activeGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.25} />
+                                <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} dy={6} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} width={24} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
+                            <Area type="monotone" dataKey="active" name="Active" stroke="hsl(var(--success))" fill="url(#activeGrad)" strokeWidth={2} dot={{ r: 3 }} />
+                            <Area type="monotone" dataKey="inactive" name="Inactive" stroke="hsl(var(--muted-foreground))" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" dot={{ r: 2 }} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                        <div className="mt-2 p-2.5 rounded-lg bg-success/5 border border-success/20">
+                          <p className="text-[10px] text-success leading-relaxed">{occupancyInsight}</p>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Row 2: Expense Pie + Payment Health + Maintenance Efficiency */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {/* Chart 3 — Expense Breakdown Pie */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-sm font-bold">Expense Breakdown</CardTitle>
+                    <p className="text-[10px] text-muted-foreground">By category · all time</p>
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    {expensePie.length === 0 ? (
+                      <div className="h-40 flex items-center justify-center text-xs text-muted-foreground italic">No expenses recorded yet.</div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <PieChart>
+                            <Pie data={expensePie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3}>
+                              {expensePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                              formatter={(v: number, name: string) => [`₱${v.toLocaleString()}`, name]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-1 mt-1">
+                          {expensePie.slice(0, 4).map(e => (
+                            <div key={e.name} className="flex items-center justify-between text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full shrink-0" style={{ background: e.fill }} />
+                                <span className="text-muted-foreground">{e.name}</span>
+                              </div>
+                              <span className="font-bold text-foreground">₱{e.value.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Chart 4 — Boarder Payment Health */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-sm font-bold">Payment Health</CardTitle>
+                    <p className="text-[10px] text-muted-foreground">Per boarder — paid vs overdue</p>
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    {boarderPaymentHealth.length === 0 ? (
+                      <div className="h-40 flex items-center justify-center text-xs text-muted-foreground italic">No active boarders with payments.</div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <BarChart data={boarderPaymentHealth} barSize={10} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                            <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={42} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 9, paddingTop: 4 }} />
+                            <Bar dataKey="paid" name="Paid" stackId="a" fill="hsl(var(--success))" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="pending" name="Pending" stackId="a" fill="hsl(var(--warning))" />
+                            <Bar dataKey="overdue" name="Overdue" stackId="a" fill="hsl(var(--destructive))" radius={[0, 3, 3, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-2 p-2 rounded-lg bg-warning/5 border border-warning/20">
+                          <p className="text-[10px] text-warning leading-relaxed">{overdueInsight}</p>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Chart 5 — Maintenance Resolution Efficiency */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-sm font-bold">Maintenance Efficiency</CardTitle>
+                    <p className="text-[10px] text-muted-foreground">Resolution rate by status</p>
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    {maintenanceEfficiency.length === 0 ? (
+                      <div className="h-40 flex items-center justify-center text-xs text-muted-foreground italic">No maintenance requests yet.</div>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <RadialBarChart cx="50%" cy="50%" innerRadius={28} outerRadius={70} barSize={14} data={maintenanceEfficiency} startAngle={90} endAngle={-270}>
+                            <RadialBar dataKey="value" cornerRadius={4} label={false} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                              formatter={(v: number, name: string) => [`${v}%`, name]}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 9, paddingTop: 4 }} />
+                          </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-1.5 mt-1">
+                          {maintenanceEfficiency.map(m => (
+                            <div key={m.name} className="flex items-center justify-between text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full shrink-0" style={{ background: m.fill }} />
+                                <span className="text-muted-foreground">{m.name}</span>
+                              </div>
+                              <span className="font-bold text-foreground">{m.value}%</span>
+                            </div>
+                          ))}
+                        </div>
+                        {maintenanceEfficiency[0]?.value >= 70 && (
+                          <div className="mt-2 p-2 rounded-lg bg-success/5 border border-success/20">
+                            <p className="text-[10px] text-success">✅ {maintenanceEfficiency[0].value}% resolution rate — great response time!</p>
+                          </div>
+                        )}
+                        {maintenanceEfficiency[0]?.value < 70 && (
+                          <div className="mt-2 p-2 rounded-lg bg-warning/5 border border-warning/20">
+                            <p className="text-[10px] text-warning">⚠️ Only {maintenanceEfficiency[0].value}% resolved. {maintenance.filter(m => m.status === "Open").length} open issues need attention.</p>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
