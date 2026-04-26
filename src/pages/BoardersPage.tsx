@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X, Lock, AlertCircle } from "lucide-react";
+import { Search, Plus, Mail, Phone, Edit, Trash2, Eye, User, Home, Calendar, ShieldCheck, Camera, X, Lock, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,13 +14,15 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const BoardersPage = () => {
-  const { boarders, rooms, profiles, addBoarder, updateBoarder, deleteBoarder, addUser, isLoading, user } = useData();
+  const { boarders, rooms, profiles, payments, addBoarder, updateBoarder, deleteBoarder, addUser, isLoading, user } = useData();
   const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
 
   const [currentBoarder, setCurrentBoarder] = useState<Partial<Boarder>>({
     fullName: "",
@@ -234,6 +236,18 @@ const BoardersPage = () => {
                            <div className="flex items-center gap-1 mt-1">
                              <ShieldCheck className="h-2.5 w-2.5 text-success" />
                              <span className="text-[8px] font-bold text-success uppercase tracking-wider">Has Login Account</span>
+                           </div>
+                        )}
+                        {payments.some(p => p.boarderId === b.id && p.status === "Overdue") && (
+                           <div className="flex items-center gap-1 mt-1">
+                             <AlertCircle className="h-2.5 w-2.5 text-destructive animate-pulse" />
+                             <span className="text-[8px] font-bold text-destructive uppercase tracking-wider">Overdue Payment</span>
+                           </div>
+                        )}
+                        {!payments.some(p => p.boarderId === b.id && p.status === "Overdue") && !payments.some(p => p.boarderId === b.id && p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid") && (
+                           <div className="flex items-center gap-1 mt-1">
+                             <Clock className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
+                             <span className="text-[8px] font-bold text-amber-500 uppercase tracking-wider">Unpaid This Month</span>
                            </div>
                         )}
                       </div>

@@ -37,12 +37,12 @@ const PaymentsPage = () => {
     amount: 0,
     date: today,
     paidDate: today,
-    dueDate: "",
+    dueDate: new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0],
     month: currentMonthYear,
     type: "Monthly Rent",
     status: "Paid",
     method: "Cash",
-    receivedBy: "Administrator",
+    receivedBy: user?.fullName || "Administrator",
     lateFee: 0,
     notes: "",
     receiptNumber: "",
@@ -126,18 +126,20 @@ const PaymentsPage = () => {
   };
 
   const handleOpenAdd = () => {
+    const defaultDue = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
+
     setMode("add");
     setCurrentPayment({
       boarderId: "",
       amount: 0,
       date: today,
       paidDate: today,
-      dueDate: "",
+      dueDate: defaultDue,
       month: currentMonthYear,
       type: "Monthly Rent",
       status: "Paid",
       method: "Cash",
-      receivedBy: "Administrator",
+      receivedBy: user?.fullName || "Administrator",
       lateFee: undefined,
       notes: "",
       receiptNumber: generateReceiptNumber(),
@@ -181,9 +183,91 @@ const PaymentsPage = () => {
         id: `p${Date.now()}`,
         createdAt: new Date().toISOString(),
       };
+
+      // Partial/Excess payment logic for "Monthly Rent"
+      if (paymentData.status === "Paid" && paymentData.type === "Monthly Rent") {
+        const boarderId = paymentData.boarderId!;
+        const expected = getDefaultAmountForBoarder(boarderId);
+        const actual = paymentData.amount || 0;
+
+        if (actual < expected) {
+          const remainder = expected - actual;
+          const remainderPayment: Payment = {
+            id: `p${Date.now()}_bal`,
+            boarderId: boarderId,
+            type: "Other",
+            amount: remainder,
+            month: paymentData.month,
+            date: paymentData.date,
+            dueDate: paymentData.dueDate,
+            status: "Overdue",
+            notes: `Balance Forward from partial payment of ${paymentData.month}. Original: ₱${expected}`,
+            createdAt: new Date().toISOString(),
+            adminId: user?.id
+          };
+          addPayment(remainderPayment);
+          toast.info(`Partial payment detected. ₱${remainder} added as Overdue balance.`);
+        } else if (actual > expected) {
+          const excess = actual - expected;
+          const advancePayment: Payment = {
+            id: `p${Date.now()}_adv`,
+            boarderId: boarderId,
+            type: "Advance",
+            amount: excess,
+            month: "Advance Credit",
+            date: paymentData.date,
+            status: "Paid",
+            notes: `Excess payment from ${paymentData.month}.`,
+            createdAt: new Date().toISOString(),
+            adminId: user?.id
+          };
+          addPayment(advancePayment);
+          payment.amount = expected; // Record this month as expected amount
+          toast.info(`Excess payment of ₱${excess} recorded as Advance.`);
+        }
+      }
+
       addPayment(payment);
       toast.success("Payment recorded successfully");
     } else {
+      // Partial/Excess payment detection on Edit
+      const originalPayment = payments.find(p => p.id === currentPayment.id);
+      if (originalPayment && paymentData.status === "Paid" && originalPayment.status !== "Paid" && paymentData.type === "Monthly Rent") {
+        const expected = getDefaultAmountForBoarder(paymentData.boarderId!);
+        const actual = (paymentData.amount || 0);
+        
+        if (actual < expected) {
+          const remainder = expected - actual;
+          const remainderPayment: Payment = {
+            ...originalPayment,
+            id: `p${Date.now()}_bal`,
+            type: "Other",
+            amount: remainder,
+            lateFee: 0,
+            status: "Overdue",
+            notes: `Balance Forward from partial payment of ${originalPayment.month}. Expected: ₱${expected}.`,
+            createdAt: new Date().toISOString(),
+          };
+          addPayment(remainderPayment);
+          toast.info(`Partial payment. ₱${remainder} forwarded as Overdue.`);
+        } else if (actual > expected) {
+          const excess = actual - expected;
+          const advancePayment: Payment = {
+            id: `p${Date.now()}_adv`,
+            boarderId: paymentData.boarderId!,
+            type: "Advance",
+            amount: excess,
+            month: "Advance Credit",
+            status: "Paid",
+            notes: `Excess payment from ${paymentData.month}.`,
+            createdAt: new Date().toISOString(),
+          };
+          addPayment(advancePayment);
+          paymentData.amount = expected; // Record this month as expected
+          toast.info(`Excess payment of ₱${excess} recorded as Advance.`);
+        }
+      }
+
       updatePayment(paymentData as Payment);
       toast.success("Payment updated successfully");
     }
@@ -203,15 +287,25 @@ const PaymentsPage = () => {
             <h1 className="page-header">Payments</h1>
             <p className="page-subtitle">Track rent and other utilities payments</p>
           </div>
-          {role !== "Boarder" ? (
-            <Button className="gap-2" onClick={handleOpenAdd}>
-              <Plus className="h-4 w-4" /> Record Payment
-            </Button>
-          ) : (
-            <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setPayModalOpen(true)}>
-              <Smartphone className="h-4 w-4" /> Pay via GCash
-            </Button>
-          )}
+          <div className="flex gap-4 items-center">
+            {role !== "Boarder" && (
+              <div className="hidden md:block text-right px-4 py-2 bg-destructive/5 border border-destructive/10 rounded-lg">
+                <p className="text-[10px] font-bold text-destructive uppercase tracking-wider">Total Outstanding</p>
+                <p className="text-lg font-black text-destructive">
+                  ₱{payments.filter(p => p.status !== "Paid").reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0).toLocaleString()}
+                </p>
+              </div>
+            )}
+            {role !== "Boarder" ? (
+              <Button className="gap-2" onClick={handleOpenAdd}>
+                <Plus className="h-4 w-4" /> Record Payment
+              </Button>
+            ) : (
+              <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setPayModalOpen(true)}>
+                <Smartphone className="h-4 w-4" /> Pay via GCash
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -414,7 +508,21 @@ const PaymentsPage = () => {
                           currentPayment.type === "Monthly Rent"
                             ? getDefaultAmountForBoarder(val)
                             : currentPayment.amount;
-                        setCurrentPayment({ ...currentPayment, boarderId: val, amount: amt || currentPayment.amount });
+                        
+                        // Calculate default due date for the selected month/year
+                        const [m, y] = getMonthYearParts(currentPayment.month);
+                        const monthIdx = months.indexOf(m);
+                        const yearNum = parseInt(y) || new Date().getFullYear();
+                        const billingDate = new Date(yearNum, monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
+                        const dueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+
+                        setCurrentPayment({ 
+                          ...currentPayment, 
+                          boarderId: val, 
+                          amount: amt || currentPayment.amount,
+                          date: billingDate,
+                          dueDate: dueDate
+                        });
                       }}
                     >
                       <SelectTrigger>
@@ -441,6 +549,23 @@ const PaymentsPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {currentPayment.boarderId && (
+                    <div className="p-3 rounded-xl bg-destructive/5 border border-destructive/10 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Outstanding Balance</span>
+                        <span className="text-sm font-black text-destructive">
+                          ₱{payments
+                            .filter(p => p.boarderId === currentPayment.boarderId && p.status !== "Paid" && p.id !== currentPayment.id)
+                            .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0)
+                            .toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-muted-foreground leading-tight">
+                        This is the accumulated unpaid balance from previous months and other fees.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Section 2: Payment Details ── */}
@@ -473,7 +598,10 @@ const PaymentsPage = () => {
                           onValueChange={(val) => {
                             const [, yearPart] = getMonthYearParts(currentPayment.month);
                             const yearToUse = yearPart || new Date().getFullYear().toString();
-                            setCurrentPayment({ ...currentPayment, month: `${val} ${yearToUse}` });
+                            const monthIdx = months.indexOf(val);
+                            const billingDate = new Date(parseInt(yearToUse), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
+                            const newDueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+                            setCurrentPayment({ ...currentPayment, month: `${val} ${yearToUse}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
                           <SelectTrigger id="pay-month">
@@ -493,7 +621,10 @@ const PaymentsPage = () => {
                             const [monthPart] = getMonthYearParts(currentPayment.month);
                             const monthToUse =
                               monthPart || new Date().toLocaleString("default", { month: "long" });
-                            setCurrentPayment({ ...currentPayment, month: `${monthToUse} ${val}` });
+                            const monthIdx = months.indexOf(monthToUse);
+                            const billingDate = new Date(parseInt(val), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
+                            const newDueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+                            setCurrentPayment({ ...currentPayment, month: `${monthToUse} ${val}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
                           <SelectTrigger>
@@ -572,9 +703,11 @@ const PaymentsPage = () => {
                       <Input
                         type="date"
                         value={currentPayment.date || ""}
-                        onChange={(e) =>
-                          setCurrentPayment({ ...currentPayment, date: e.target.value })
-                        }
+                        onChange={(e) => {
+                          const d = e.target.value;
+                          const dd = d ? new Date(new Date(d).setDate(new Date(d).getDate() + 31)).toISOString().split('T')[0] : "";
+                          setCurrentPayment({ ...currentPayment, date: d, dueDate: dd });
+                        }}
                       />
                     </div>
                   </div>
@@ -734,11 +867,36 @@ const PaymentsPage = () => {
                         ₱{(currentPayment.lateFee ?? 0).toLocaleString()}
                       </span>
 
-                      <span className="text-muted-foreground font-semibold">Total</span>
-                      <span className="font-bold text-accent text-right">
+                      <span className="text-muted-foreground font-semibold">Total for this Record</span>
+                      <span className="font-bold text-foreground text-right">
                         ₱
                         {((currentPayment.amount || 0) + (currentPayment.lateFee ?? 0)).toLocaleString()}
                       </span>
+
+                      {currentPayment.boarderId && payments.some(p => p.boarderId === currentPayment.boarderId && p.status !== "Paid" && p.id !== currentPayment.id) && (
+                        <>
+                          <span className="text-destructive font-semibold">Previous Balance</span>
+                          <span className="font-bold text-destructive text-right">
+                            ₱{payments
+                              .filter(p => p.boarderId === currentPayment.boarderId && p.status !== "Paid" && p.id !== currentPayment.id)
+                              .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0)
+                              .toLocaleString()}
+                          </span>
+
+                          <div className="col-span-2 border-t border-accent/20 my-1" />
+
+                          <span className="text-accent font-black text-[12px]">GRAND TOTAL</span>
+                          <span className="font-black text-accent text-right text-[12px]">
+                            ₱{(
+                              (currentPayment.amount || 0) + 
+                              (currentPayment.lateFee ?? 0) + 
+                              payments
+                                .filter(p => p.boarderId === currentPayment.boarderId && p.status !== "Paid" && p.id !== currentPayment.id)
+                                .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0)
+                            ).toLocaleString()}
+                          </span>
+                        </>
+                      )}
 
                       <span className="text-muted-foreground">Period</span>
                       <span className="text-right">{currentPayment.month || "—"}</span>

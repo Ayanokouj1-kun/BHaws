@@ -2,7 +2,7 @@ import { useMemo, useEffect } from "react";
 import {
   Users, Building2, PhilippinePeso, TrendingUp, TrendingDown,
   Home, CreditCard, Settings, Clock, User as UserIcon,
-  Wrench, AlertCircle, CheckCircle2, Receipt, Bell, Plus,
+  Wrench, AlertCircle, AlertTriangle, CheckCircle2, Receipt, Bell, Plus,
   Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2
 } from "lucide-react";
 import { useData } from "@/hooks/useData";
@@ -34,6 +34,7 @@ const Dashboard = () => {
   const [payModalOpen, setPayModalOpen] = useReactState(false);
   const [qrZoomed, setQrZoomed] = useReactState(false);
   const [copied, setCopied] = useReactState(false);
+  const [overdueWarningOpen, setOverdueWarningOpen] = useReactState(false);
 
   useEffect(() => {
     document.title = "BHaws Management and Monitoring System Dashboard";
@@ -53,6 +54,23 @@ const Dashboard = () => {
   const myPayments = useMemo(() => isBoarder ? payments.filter(p => p.boarderId === user?.boarderId).sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()) : [], [isBoarder, payments, user]);
   const activeAnnouncements = useMemo(() => announcements.filter(a => !a.expiresAt || new Date(a.expiresAt) > new Date()), [announcements]);
 
+  const myOverduePayments = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    return myPayments.filter(p => p.status === "Overdue" || (p.status !== "Paid" && p.dueDate && p.dueDate < todayStr));
+  }, [myPayments]);
+  const myUpcomingPayments = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const in3DaysStr = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+    return myPayments.filter(p => p.status === "Pending" && p.dueDate && p.dueDate >= todayStr && p.dueDate <= in3DaysStr);
+  }, [myPayments]);
+
+  // Aggressively show overdue warning
+  useEffect(() => {
+    if (isBoarder && myOverduePayments.length > 0) {
+      setOverdueWarningOpen(true);
+    }
+  }, [isBoarder, myOverduePayments.length]);
+
   // ── Derived stats (recalculated whenever data changes) ──────────────────────
   const stats = useMemo(() => {
     const activeBoarders = boarders.filter(b => b.status === "Active").length;
@@ -66,6 +84,10 @@ const Dashboard = () => {
     const paidPayments = payments.filter(p => p.status === "Paid");
     const overduePayments = payments.filter(p => p.status === "Overdue");
     const pendingPayments = payments.filter(p => p.status === "Pending");
+    
+    const todayStr = new Date().toISOString().split("T")[0];
+    const in3DaysStr = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+    const upcomingPayments = payments.filter(p => p.status === "Pending" && p.dueDate && p.dueDate >= todayStr && p.dueDate <= in3DaysStr);
 
     const totalIncome = paidPayments.reduce((s, p) => s + p.amount, 0);
     const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -79,7 +101,9 @@ const Dashboard = () => {
       occupiedBeds, totalBeds, occupancyPct, availableRooms, lockedRooms,
       totalIncome, totalExpenses, netFlow,
       overdueCount: overduePayments.length,
-      overdueTotal: overduePayments.reduce((s, p) => s + p.amount, 0),
+      overdueTotal: overduePayments.reduce((s, p) => s + (p.amount + (p.lateFee || 0)), 0),
+      upcomingDueCount: upcomingPayments.length,
+      upcomingDueTotal: upcomingPayments.reduce((s, p) => s + p.amount, 0),
       pendingCount: pendingPayments.length,
       paidCount: paidPayments.length,
       openMaintenance, urgentMaintenance,
@@ -262,6 +286,27 @@ const Dashboard = () => {
           )}
         </div>
 
+        {/* ── Top Level Critical Alerts ──────────────────────────────────── */}
+        {isBoarder && myOverduePayments.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive shadow-md text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+            <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
+            <span className="flex-1">URGENT: You have {myOverduePayments.length} overdue payment(s) totaling ₱{myOverduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}. Please settle immediately.</span>
+            <Button size="sm" className="ml-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
+              Pay Now →
+            </Button>
+          </div>
+        )}
+        {isBoarder && myOverduePayments.length === 0 && myUpcomingPayments.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2">
+            <Clock className="h-5 w-5 shrink-0 animate-pulse text-amber-600 dark:text-amber-400" />
+            Reminder: You have {myUpcomingPayments.length} payment(s) due securely within the next 3 days totaling ₱{myUpcomingPayments.reduce((s,p)=>s+p.amount, 0).toLocaleString()}.
+            <Button size="sm" className="ml-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-3 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
+              Pay Now →
+            </Button>
+          </div>
+        )}
+
         {isBoarder ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* My Accommodation */}
@@ -279,21 +324,19 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-border/60 shadow-sm bg-success/5">
+                <Card className="border-border/60 shadow-sm bg-destructive/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-success" /> Payment Status
+                      <PhilippinePeso className="h-4 w-4 text-destructive" /> Total Balance Owed
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-foreground">
-                      {myPayments.some(p => p.status === "Overdue") ? "Action Required" : "Up to Date"}
+                    <p className="text-2xl font-bold text-destructive">
+                      ₱{myPayments.filter(p => p.status !== "Paid").reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {myPayments.filter(p => p.status === "Paid").length} payments made ·
-                      <span className={myPayments.some(p => p.status === "Overdue") ? "text-destructive font-bold" : ""}>
-                        {myPayments.filter(p => p.status === "Overdue").length} overdue
-                      </span>
+                      Includes {myPayments.filter(p => p.status !== "Paid").length} unpaid items
+                      {myOverduePayments.length > 0 && <span className="text-destructive font-bold ml-1">· {myOverduePayments.length} Overdue</span>}
                     </p>
                   </CardContent>
                 </Card>
@@ -377,11 +420,21 @@ const Dashboard = () => {
               </div>
             )}
             {stats.overdueCount > 0 && (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 text-sm text-warning font-medium">
-                <Bell className="h-4 w-4 shrink-0" />
-                {stats.overdueCount} overdue payment{stats.overdueCount > 1 ? "s" : ""} — total ₱{stats.overdueTotal.toLocaleString()} outstanding.
-                <Button size="sm" variant="ghost" className="ml-auto text-warning hover:bg-warning/10 h-7 px-2 text-xs" onClick={() => navigate("/payments")}>
-                  View →
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/40 shadow-sm text-sm text-destructive font-bold relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+                <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
+                URGENT: {stats.overdueCount} overdue payment{stats.overdueCount > 1 ? "s" : ""} — total ₱{stats.overdueTotal.toLocaleString()} outstanding.
+                <Button size="sm" variant="ghost" className="ml-auto text-destructive hover:bg-destructive/10 h-7 px-3 text-xs border border-destructive/20 font-bold" onClick={() => navigate("/payments")}>
+                  Manage →
+                </Button>
+              </div>
+            )}
+            {stats.upcomingDueCount > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/10 border border-warning/30 shadow-sm text-sm font-semibold text-amber-600 dark:text-amber-400">
+                <Clock className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 animate-pulse" />
+                Due Soon: {stats.upcomingDueCount} payment(s) are due in the next 3 days (totaling ₱{stats.upcomingDueTotal.toLocaleString()}).
+                <Button size="sm" variant="ghost" className="ml-auto text-amber-600 dark:text-amber-400 hover:bg-warning/20 h-7 px-3 text-xs font-bold border border-warning/20" onClick={() => navigate("/payments")}>
+                  Review →
                 </Button>
               </div>
             )}
@@ -973,6 +1026,63 @@ const Dashboard = () => {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Massive Overdue Warning Modal */}
+      <Dialog open={overdueWarningOpen} onOpenChange={setOverdueWarningOpen}>
+        <DialogContent className="max-w-md border-destructive border-2 shadow-2xl shadow-destructive/50 overflow-hidden sm:rounded-2xl">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive animate-pulse" />
+          <DialogHeader className="pt-6 pb-2 text-center space-y-3">
+            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center border-4 border-destructive/20 relative">
+              <div className="absolute inset-0 rounded-full border border-destructive animate-ping opacity-50" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-destructive uppercase tracking-widest">
+              Account Overdue
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="text-center space-y-4 py-4 px-2">
+            <p className="text-sm font-semibold text-foreground">
+              Dear <span className="text-destructive">{user?.fullName || "Boarder"}</span>,
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Our records indicate that you have <strong className="text-foreground">{myOverduePayments.length}</strong> overdue payment(s). 
+              A penalty of <strong className="text-destructive">₱{settings.lateFeeAmount?.toLocaleString() || "200"} per day</strong> is actively accumulating on your unpaid balance.
+            </p>
+            
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 my-2">
+              <p className="text-xs font-bold uppercase text-destructive/70 tracking-widest mb-1">Total Outstanding Amount</p>
+              <p className="text-3xl font-black text-destructive">
+                ₱{myOverduePayments.reduce((s,p) => s + p.amount + (p.lateFee || 0), 0).toLocaleString()}
+              </p>
+            </div>
+            
+            <p className="text-xs font-medium text-destructive/80 italic">
+              Failure to settle this balance immediately may result in further penalties or suspension of your boarding privileges.
+            </p>
+          </div>
+          
+          <DialogFooter className="pb-2 pt-2 gap-2 flex-col sm:flex-col">
+            <Button 
+              size="lg" 
+              className="w-full bg-destructive text-white hover:bg-destructive/90 font-bold text-sm tracking-wider uppercase"
+              onClick={() => {
+                setOverdueWarningOpen(false);
+                setPayModalOpen(true);
+              }}
+            >
+              Pay Now via GCash
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full text-xs text-muted-foreground hover:bg-muted"
+              onClick={() => setOverdueWarningOpen(false)}
+            >
+              I will settle this later
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>

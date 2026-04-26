@@ -88,7 +88,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [profiles, setProfiles] = useState<User[]>([]);
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        const saved = localStorage.getItem("bhaws_user_session");
+        return saved ? JSON.parse(saved) : null;
+    });
     // Start as FALSE so the login page shows immediately
     const [isLoading, setIsLoading] = useState(false);
 
@@ -186,16 +189,49 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 createdAt: b.created_at || "",
             })));
 
-            if (paymentsRes) setPayments(paymentsRes.map((p: any) => ({
-                ...p,
-                boarderId: p.boarder_id,
-                amount: parseFloat(p.amount) || 0,
-                paidDate: p.paid_date,
-                dueDate: p.due_date,
-                lateFee: parseFloat(p.late_fee) || 0,
-                receiptNumber: p.receipt_number,
-                createdAt: p.created_at
-            })));
+            if (paymentsRes) {
+                const s = settingsRes?.data;
+                const lateFeeEnabled = s ? s.late_fee_enabled !== false : DEFAULT_SETTINGS.lateFeeEnabled;
+                const lateFeePerDay = s ? (parseFloat(s.late_fee_amount) || 0) : DEFAULT_SETTINGS.lateFeeAmount;
+                const gracePeriod = s ? (parseInt(s.grace_period_days) || 0) : DEFAULT_SETTINGS.gracePeriodDays;
+
+                setPayments(paymentsRes.map((p: any) => {
+                    let status = p.status;
+                    let lateFee = parseFloat(p.late_fee) || 0;
+
+                    // Dynamically compute per-day late fee for unpaid payments past due date
+                    if (status !== "Paid" && p.due_date) {
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const due = new Date(p.due_date);
+                        due.setHours(0,0,0,0);
+                        
+                        const deadline = new Date(due);
+                        deadline.setDate(deadline.getDate() + (gracePeriod || 0));
+
+                        if (today > deadline) {
+                            status = "Overdue";
+                            if (lateFeeEnabled && lateFeePerDay && lateFeePerDay > 0) {
+                                const diffTime = Math.abs(today.getTime() - deadline.getTime());
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                lateFee = diffDays * lateFeePerDay;
+                            }
+                        }
+                    }
+
+                    return {
+                        ...p,
+                        boarderId: p.boarder_id,
+                        amount: parseFloat(p.amount) || 0,
+                        paidDate: p.paid_date,
+                        dueDate: p.due_date,
+                        lateFee: lateFee,
+                        status: status,
+                        receiptNumber: p.receipt_number,
+                        createdAt: p.created_at
+                    };
+                }));
+            }
 
             if (logsRes?.data) setAuditLogs(logsRes.data.map((l: any) => ({
                 ...l, entityId: l.entity_id, performedBy: l.performed_by
@@ -365,6 +401,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     createdBy: profile.created_by,
                 };
                 setUser(u as any);
+                localStorage.setItem("bhaws_user_session", JSON.stringify(u));
                 refreshData();
                 return true;
             }
@@ -376,6 +413,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const mock = MOCK_USERS.find(u => u.username === lc && password === lc);
         if (mock) {
             setUser(mock as any);
+            localStorage.setItem("bhaws_user_session", JSON.stringify(mock));
             refreshData();
             return true;
         }
@@ -386,6 +424,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- LOGOUT ---
     const logout = async () => {
         setUser(null);
+        localStorage.removeItem("bhaws_user_session");
         try { await supabase.auth.signOut(); } catch { /* ignore */ }
     };
 
@@ -574,7 +613,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
-            method: payment.method, notes: payment.notes,
+            method: payment.method, notes: payment.notes, late_fee: payment.lateFee,
             receipt_number: payment.receiptNumber || generateReceiptNumber(),
             admin_id: adminId
         }]);
@@ -588,7 +627,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const updatePayment = async (payment: Payment) => {
         const { error } = await supabase.from("payments").update({
-            status: payment.status, paid_date: payment.paidDate, method: payment.method,
+            boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
+            month: payment.month, due_date: payment.dueDate, status: payment.status,
+            paid_date: payment.paidDate, method: payment.method, late_fee: payment.lateFee,
             receipt_number: payment.receiptNumber, notes: payment.notes
         }).eq("id", payment.id);
         if (error) toast.error("Failed to update payment");
@@ -832,27 +873,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         const usernameClean = profile.username.trim().toLowerCase();
         if (!usernameClean) { toast.error("Username is required"); return; }
-        const id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         
         const createdBy = profile.createdBy || user?.id;
+        
+        const uuidv4 = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = (Math.random() * 16) | 0;
+                const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            });
+        };
 
-        const { error } = await supabase.from("profiles").insert([{
+        const id = (typeof crypto !== "undefined" && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : uuidv4();
+
+        const insertData: any = {
             id,
             username: usernameClean,
             full_name: profile.fullName.trim(),
             role: profile.role,
             boarder_id: profile.boarderId || null,
             created_by: createdBy
-        }]);
+        };
+
+        const { data: newProfile, error } = await supabase.from("profiles").insert([insertData]).select().single();
+        
         if (error) {
             if (error.code === "23505") toast.error("That username is already taken.");
             else toast.error("Failed to create account: " + error.message);
             return;
         }
+        
+        const finalId = newProfile.id;
         toast.success(`Account created. Login with username "${usernameClean}" (password same as username).`);
-        addLog("Account Created", "User", id, `${profile.fullName} (${profile.role})`);
+        addLog("Account Created", "User", finalId, `${profile.fullName} (${profile.role})`);
         refreshData();
-        return { ...profile, id };
+        return { ...profile, id: finalId };
     };
 
     const deleteUser = async (userId: string) => {
@@ -929,6 +986,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (user) {
             const next = { ...user, ...data };
             setUser(next as any);
+            localStorage.setItem("bhaws_user_session", JSON.stringify(next));
         }
     };
 

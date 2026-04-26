@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useData } from "@/hooks/useData";
 import Dashboard from "./pages/Dashboard";
 import RoomsPage from "./pages/RoomsPage";
@@ -39,7 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <DataProvider>
-      <BrowserRouter>
+      <HashRouter>
         <ThemeProvider>
           <TooltipProvider>
             <Toaster />
@@ -107,7 +107,7 @@ const App = () => (
             </Routes>
           </TooltipProvider>
         </ThemeProvider>
-      </BrowserRouter>
+      </HashRouter>
     </DataProvider>
   </QueryClientProvider>
 );

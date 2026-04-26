@@ -14,7 +14,8 @@ import {
     User as UserIcon,
     Clock,
     Printer,
-    FileText
+    FileText,
+    AlertCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,6 +34,9 @@ const BoarderDetails = () => {
     }
 
     const boarderPayments = payments.filter((p) => p.boarderId === id);
+    const overduePayments = boarderPayments.filter((p) => p.status === "Overdue");
+    const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+    const hasPaidCurrentMonth = boarderPayments.some(p => p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid");
     const room = rooms.find((r) => r.id === boarder?.assignedRoomId);
     const bed = room?.beds.find((b) => b.id === boarder?.assignedBedId);
 
@@ -53,6 +57,32 @@ const BoarderDetails = () => {
                         <p className="page-subtitle">Boarder Profile & Payment History</p>
                     </div>
                 </div>
+
+                {overduePayments.length > 0 && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive shadow-md text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+                        <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
+                        <span className="flex-1">WARNING: This boarder has {overduePayments.length} overdue payment(s) totaling ₱{overduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}. Please follow up.</span>
+                        {role !== "Boarder" && (
+                            <Button size="sm" className="ml-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3 text-xs font-bold" onClick={() => navigate("/payments")}>
+                                Manage Payments →
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {!hasPaidCurrentMonth && overduePayments.length === 0 && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 shadow-md text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-warning" />
+                        <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
+                        <span className="flex-1">NOTICE: Monthly rent for the current month ({currentMonthStr}) has not been settled yet.</span>
+                        {role !== "Boarder" && (
+                            <Button size="sm" className="ml-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-3 text-xs font-bold" onClick={() => navigate("/payments")}>
+                                Record Payment →
+                            </Button>
+                        )}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <Card className="lg:col-span-1 shadow-sm border-border/60 overflow-hidden">
