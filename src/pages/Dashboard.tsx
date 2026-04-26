@@ -66,7 +66,7 @@ const Dashboard = () => {
   }, [myPayments]);
 
   const balanceBreakdown = useMemo(() => {
-    if (!isBoarder) return { previous: 0, current: 0, total: 0 };
+    if (!isBoarder) return { previous: 0, current: 0, total: 0, totalPaid: 0 };
     
     const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
     
@@ -77,11 +77,16 @@ const Dashboard = () => {
     const previous = myPayments
       .filter(p => p.status !== "Paid" && (p.type !== "Monthly Rent" || p.month !== currentMonthStr))
       .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0);
+
+    const totalPaid = myPayments
+      .filter(p => p.status === "Paid")
+      .reduce((sum, p) => sum + p.amount, 0);
       
     return {
       previous,
       current: currentRent,
-      total: previous + currentRent
+      total: previous + currentRent,
+      totalPaid
     };
   }, [isBoarder, myPayments]);
 
@@ -349,6 +354,22 @@ const Dashboard = () => {
                   <CardContent>
                     <p className="text-2xl font-bold text-foreground">{myRoom?.name || "No Assignment"}</p>
                     <p className="text-xs text-muted-foreground mt-1">{myBed?.name || "No Bed Assigned"} · Floor {myRoom?.floor || "-"}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/60 shadow-sm bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-success" /> Total Paid to Date
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-black text-success">
+                      ₱{balanceBreakdown.totalPaid.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                      Successful payments recorded
+                    </p>
                   </CardContent>
                 </Card>
 
