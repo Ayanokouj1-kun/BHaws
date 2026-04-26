@@ -536,61 +536,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
         toast.success("Boarder added");
         const assignedRoom = rooms.find(r => r.id === boarder.assignedRoomId);
-        const roomRate = assignedRoom?.monthlyRate || 0;
-
-        // 1. Create Monthly Rent payment for the move-in month
-        // We consider the deposit amount as the primary source for the first month's rent
-        if (boarder.depositAmount > 0) {
-            const moveInMonth = new Date(boarder.moveInDate).toLocaleString("default", { month: "long", year: "numeric" });
-            const rentAmount = Math.min(boarder.depositAmount, roomRate);
-            
-            const { error: p1Error } = await supabase.from("payments").insert([{
-                boarder_id: nb.id,
-                type: "Monthly Rent",
-                amount: rentAmount,
-                month: moveInMonth,
-                date: boarder.moveInDate,
-                dueDate: boarder.moveInDate,
-                paid_date: boarder.moveInDate,
-                status: "Paid", // Registration fees are collected upfront
-                method: "Cash",
-                notes: `Initial monthly rent settled during registration for ${moveInMonth}`,
-                receipt_number: generateReceiptNumber(),
-                admin_id: adminId
-            }]);
-            
-            if (p1Error) console.error("Monthly Rent auto-insert failed:", p1Error);
-            
-            // 2. Create Security Deposit for the remainder
-            // In boarding house terms, the excess is usually the security deposit
-            const remainder = boarder.depositAmount - rentAmount;
-            if (remainder > 0) {
-                const { error: p2Error } = await supabase.from("payments").insert([{
-                    boarder_id: nb.id,
-                    type: "Security Deposit",
-                    amount: remainder,
-                    date: boarder.moveInDate,
-                    paid_date: boarder.moveInDate,
-                    status: "Paid",
-                    method: "Cash",
-                    notes: "Security deposit settled during registration",
-                    receipt_number: generateReceiptNumber(),
-                    admin_id: adminId
-                }]);
-                if (p2Error) console.error("Security Deposit auto-insert failed:", p2Error);
-            }
-        }
-
-        // If there's a separate advanceAmount explicitly provided in the boarder record, 
-        // we could also create an Advance record, but usually depositAmount contains the total.
-        // However, looking at BoardersPage, advanceAmount is the "excess".
-        // In my logic above, the excess is labeled as "Security Deposit".
-
-        addLog("Boarder Registered", "Boarder", nb.id, `${boarder.fullName} registered. Monthly Rent and Initial Fees recorded to history.`);
-        
-        // Wait a bit for Supabase to propagate before refreshing to ensure state consistency
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await refreshData();
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}.`);
+        refreshData();
         return { ...boarder, id: nb.id };
     };
 

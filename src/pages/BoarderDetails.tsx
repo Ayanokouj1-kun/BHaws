@@ -40,14 +40,7 @@ const BoarderDetails = () => {
     const room = rooms.find((r) => r.id === boarder?.assignedRoomId);
     const bed = room?.beds.find((b) => b.id === boarder?.assignedBedId);
     
-    // Check if paid via a specific "Monthly Rent" record
-    const hasMonthlyRentRecord = boarderPayments.some(p => p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid");
-    
-    // Fallback: If no record exists, check if they just moved in this month and paid enough deposit/advance
-    const isNewBoarderThisMonth = boarder?.moveInDate && new Date(boarder.moveInDate).toLocaleString("default", { month: "long", year: "numeric" }) === currentMonthStr;
-    const paidInitialFees = (boarder?.depositAmount || 0) >= (room?.monthlyRate || 0);
-    
-    const hasPaidCurrentMonth = hasMonthlyRentRecord || (isNewBoarderThisMonth && paidInitialFees);
+    const hasPaidCurrentMonth = boarderPayments.some(p => p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid");
 
     const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
 
