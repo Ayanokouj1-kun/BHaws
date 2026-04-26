@@ -359,7 +359,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 refreshData();
             })
             // Maintenance — refresh on any change
-            .on("postgres_changes", { event: "*", schema: "public", table: "maintenance_requests" }, () => {
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "maintenance_requests" }, (payload) => {
+                const req = payload.new as any;
+                // Notify Admin/Staff of new maintenance request
+                if (user?.role === "Admin" || user?.role === "Staff" || user?.role === "SuperAdmin") {
+                    toast.warning(`🔧 New Maintenance Request: ${req.title}`, {
+                        description: `Room ${rooms.find(r => r.id === req.room_id)?.name || "Unknown"} - ${req.priority} Priority`,
+                        duration: 8000,
+                    });
+                }
+                refreshData();
+            })
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "maintenance_requests" }, () => {
+                refreshData();
+            })
+            .on("postgres_changes", { event: "DELETE", schema: "public", table: "maintenance_requests" }, () => {
                 refreshData();
             })
             .subscribe();

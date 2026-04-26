@@ -95,8 +95,16 @@ export function AppLayout({ children }: AppLayoutProps) {
         .slice(0, 3)
         .map(p => ({ id: `pend-${p.id}`, type: "pending" as const, priority: "Normal", message: `Pending: ₱${p.amount.toLocaleString()} for ${p.month || "—"}`, detail: "", time: p.date || "", isNew: false })),
       ...maintenance
-        .filter(m => (m.status === "Open" || m.status === "In Progress") && m.priority === "Urgent")
-        .map(m => ({ id: `maint-${m.id}`, type: "urgent" as const, priority: "Urgent", message: `Urgent maintenance: ${m.title}`, detail: "", time: m.createdAt, isNew: false })),
+        .filter(m => m.status === "Open" || (m.status === "In Progress" && m.priority === "Urgent"))
+        .map(m => ({ 
+          id: `maint-${m.id}`, 
+          type: m.priority === "Urgent" ? "urgent" as const : "pending" as const, 
+          priority: m.priority, 
+          message: `${m.priority === "Urgent" ? "Urgent: " : "New Request: "}${m.title}`, 
+          detail: `Room ${useData().rooms.find(r => r.id === m.roomId)?.name || "—"}`, 
+          time: m.createdAt, 
+          isNew: Math.abs(new Date().getTime() - new Date(m.createdAt).getTime()) < 24 * 60 * 60 * 1000 // < 24 hrs
+        })),
     ]
     : payments
       .filter(p => p.boarderId === user?.boarderId && (p.status === "Overdue" || p.status === "Pending"))
