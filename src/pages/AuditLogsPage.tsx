@@ -211,10 +211,10 @@ const AuditLogsPage = () => {
                       </div>
                     </TableCell>
                     <TableCell className="py-3">
-                      <p className="text-sm text-foreground max-w-[400px] truncate" title={log.details}>{log.details}</p>
-                      <p className="text-[9px] font-mono text-muted-foreground/50 uppercase mt-0.5 tracking-tighter">Target ID: {log.entityId}</p>
+                      <p className="text-sm text-foreground leading-snug" title={log.details}>{log.details}</p>
+                      <p className="text-[9px] font-mono text-muted-foreground/50 uppercase mt-1 tracking-tighter">Target ID: {log.entityId}</p>
                     </TableCell>
-                    <TableCell className="py-3">
+                    <TableCell className="py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center">
                           <User className="h-3 w-3 text-accent" />
@@ -222,7 +222,7 @@ const AuditLogsPage = () => {
                         <span className="text-xs font-semibold text-foreground">{log.performedBy}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right pr-6 py-3">
+                    <TableCell className="text-right pr-6 py-3 whitespace-nowrap">
                       <span className="text-[10px] font-bold text-muted-foreground bg-muted/40 px-2 py-1 rounded">
                         {log.timestamp}
                       </span>
