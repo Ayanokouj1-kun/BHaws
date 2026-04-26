@@ -514,7 +514,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- BOARDERS ---
     const addBoarder = async (boarder: Boarder) => {
         if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
-        const adminId = boarder.adminId || user?.id;
+        const adminId = boarder.adminId || ((user?.role === "Admin" || user?.role === "SuperAdmin") ? user?.id : user?.createdBy);
         
         const { data: nb, error } = await supabase.from("boarders").insert([{
             full_name: boarder.fullName,
@@ -613,7 +613,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- PAYMENTS ---
     const addPayment = async (payment: Payment) => {
-        const adminId = payment.adminId || user?.id;
+        const adminId = payment.adminId || ((user?.role === "Admin" || user?.role === "SuperAdmin") ? user?.id : user?.createdBy);
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
@@ -660,7 +660,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- MAINTENANCE ---
     const addMaintenance = async (req: MaintenanceRequest) => {
-        const adminId = req.adminId || user?.id;
+        const adminId = req.adminId || ((user?.role === "Admin" || user?.role === "SuperAdmin") ? user?.id : user?.createdBy);
         const { error } = await supabase.from("maintenance_requests").insert([{
             room_id: req.roomId, boarder_id: req.boarderId, title: req.title,
             description: req.description, priority: req.priority, status: req.status,
@@ -706,7 +706,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- EXPENSES ---
     const addExpense = async (expense: Expense) => {
-        const adminId = expense.adminId || user?.id;
+        const adminId = expense.adminId || ((user?.role === "Admin" || user?.role === "SuperAdmin") ? user?.id : user?.createdBy);
         const { error } = await supabase.from("expenses").insert([{
             category: expense.category, description: expense.description,
             amount: expense.amount, date: expense.date, paid_by: expense.paidBy,
@@ -883,7 +883,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const usernameClean = profile.username.trim().toLowerCase();
         if (!usernameClean) { toast.error("Username is required"); return; }
         
-        const createdBy = profile.createdBy || user?.id;
+        const createdBy = profile.createdBy || ((user?.role === "Admin" || user?.role === "SuperAdmin") ? user?.id : user?.createdBy);
         
         const uuidv4 = () => {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
