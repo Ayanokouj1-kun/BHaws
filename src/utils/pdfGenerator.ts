@@ -10,44 +10,90 @@ interface ExportConfig {
 }
 
 export const generatePDF = (config: ExportConfig) => {
-    const doc = new jsPDF();
-    const themeColor = [79, 70, 229]; // Indigo-600
+    // Standard A4 orientation logic
+    const isWide = config.headers.length > 5;
+    const doc = new jsPDF({
+        orientation: isWide ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a4"
+    });
 
-    // Add Header
+    const themeColor = [15, 23, 42]; // Slate-900
+    const accentColor = [79, 70, 229]; // Indigo-600
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+
+    // ── Header ──
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(themeColor[0], themeColor[1], themeColor[2]);
-    doc.text(config.title, 14, 22);
+    doc.text(config.title.toUpperCase(), margin, 20);
 
     if (config.subtitle) {
-        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text(config.subtitle, 14, 30);
+        const splitSubtitle = doc.splitTextToSize(config.subtitle, pageWidth - (margin * 2));
+        doc.text(splitSubtitle, margin, 26);
     }
 
-    // Add Timestamp
-    doc.setFontSize(10);
-    doc.setTextColor(150);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 38);
+    // Divider
+    doc.setDrawColor(220);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 35, pageWidth - margin, 35);
 
+    // Meta Info (Right aligned)
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin, 15, { align: 'right' });
+    doc.text("BHaws Management System", pageWidth - margin, 19, { align: 'right' });
+
+    // ── Table ──
     autoTable(doc, {
         head: [config.headers],
         body: config.data,
-        startY: 45,
+        startY: 40,
         theme: 'grid',
         headStyles: {
             fillColor: themeColor,
             textColor: [255, 255, 255],
-            fontSize: 10,
-            fontStyle: 'bold',
-        },
-        styles: {
             fontSize: 9,
+            fontStyle: 'bold',
+            halign: 'left',
             cellPadding: 4,
         },
-        alternateRowStyles: {
-            fillColor: [245, 247, 250],
+        styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            valign: 'middle',
         },
-        margin: { top: 45 },
+        columnStyles: {
+            // Right align numeric values if they are currency
+            ...config.headers.reduce((acc: any, header, idx) => {
+                const h = header.toLowerCase();
+                if (h.includes('amount') || h.includes('rate') || h.includes('balance') || h.includes('total') || h.includes('collected')) {
+                    acc[idx] = { halign: 'right', fontStyle: 'bold' };
+                }
+                return acc;
+            }, {})
+        },
+        alternateRowStyles: {
+            fillColor: [249, 250, 251],
+        },
+        margin: { top: 40, left: margin, right: margin, bottom: 20 },
+        didDrawPage: (data) => {
+            // ── Footer ──
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            const str = `Page ${doc.internal.getNumberOfPages()}`;
+            doc.text(str, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            
+            // Footer Branding
+            doc.setFont("helvetica", "italic");
+            doc.text("Official System Report - Confidentail", margin, pageHeight - 10);
+        }
     });
 
     // Save PDF
