@@ -178,30 +178,30 @@ const ExpensesPage = () => {
     /* ── render table rows ── */
     const renderRows = (rows: Expense[]) =>
         rows.map(expense => (
-            <TableRow key={expense.id} className="hover:bg-muted/20 group">
-                <TableCell>
+            <TableRow key={expense.id} className="hover:bg-muted/20 group border-b border-border/40">
+                <TableCell className="whitespace-nowrap font-medium text-foreground py-3">
                     <div className="flex items-center gap-3">
-                        {(() => { const RowIcon = categoryIcons[expense.category]; return <div className={`p-1.5 rounded-md border ${categoryColors[expense.category]}`}><RowIcon className="h-3.5 w-3.5" strokeWidth={1.75} /></div>; })()}
-                        <span className="text-sm font-medium">{expense.description}</span>
+                        {(() => { const RowIcon = categoryIcons[expense.category]; return <div className={`p-1.5 rounded-md border ${categoryColors[expense.category]}`}><RowIcon className="h-3.5 w-3.5" strokeWidth={2} /></div>; })()}
+                        <span className="text-sm">{expense.description}</span>
                     </div>
                 </TableCell>
-                <TableCell>
-                    <Badge variant="outline" className={`text-[10px] font-bold uppercase ${categoryColors[expense.category]}`}>
+                <TableCell className="whitespace-nowrap py-3">
+                    <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-tight py-0 h-4.5 ${categoryColors[expense.category]}`}>
                         {expense.category}
                     </Badge>
                 </TableCell>
-                <TableCell className="font-bold text-destructive">₱{expense.amount.toLocaleString()}</TableCell>
-                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(expense.date)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{expense.paidBy}</TableCell>
-                <TableCell className="text-xs font-mono text-muted-foreground hidden md:table-cell">{expense.receiptRef || "—"}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex gap-1 items-center justify-end flex-nowrap">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-accent/5 hover:text-accent transition-colors" onClick={() => handleEdit(expense)}>
-                            <Edit className="h-3.5 w-3.5" />
+                <TableCell className="font-black text-destructive whitespace-nowrap text-right pr-8 py-3">₱{expense.amount.toLocaleString()}</TableCell>
+                <TableCell className="text-xs font-bold text-muted-foreground whitespace-nowrap py-3">{formatDate(expense.date)}</TableCell>
+                <TableCell className="text-xs font-medium text-foreground hidden md:table-cell whitespace-nowrap py-3">{expense.paidBy}</TableCell>
+                <TableCell className="text-[10px] font-mono text-muted-foreground hidden md:table-cell whitespace-nowrap py-3 uppercase tracking-tighter">{expense.receiptRef || "—"}</TableCell>
+                <TableCell className="text-right whitespace-nowrap py-3">
+                    <div className="flex gap-1 items-center justify-center flex-nowrap pr-2">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:bg-accent/10 hover:text-accent transition-colors" onClick={() => handleEdit(expense)}>
+                            <Edit className="h-3 w-3" />
                         </Button>
                         {isAdmin && (
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => handleDelete(expense.id)}>
-                                <Trash2 className="h-3.5 w-3.5" />
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10 transition-colors" onClick={() => handleDelete(expense.id)}>
+                                <Trash2 className="h-3 w-3" />
                             </Button>
                         )}
                     </div>
@@ -224,28 +224,28 @@ const ExpensesPage = () => {
                 </div>
 
                 {/* Financial Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="stat-card flex items-center gap-4">
-                        <div className="p-3 bg-success/10 rounded-2xl"><Wallet className="h-6 w-6 text-success" /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="stat-card flex items-center gap-4 py-3 px-4 shadow-sm border-border/40">
+                        <div className="p-2.5 bg-success/10 rounded-xl"><Wallet className="h-5 w-5 text-success" /></div>
                         <div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Income</p>
-                            <p className="text-2xl font-bold text-success">₱{totalIncome.toLocaleString()}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Income</p>
+                            <p className="text-xl font-black text-success leading-none">₱{totalIncome.toLocaleString()}</p>
                         </div>
                     </div>
-                    <div className="stat-card flex items-center gap-4">
-                        <div className="p-3 bg-destructive/10 rounded-2xl"><TrendingDown className="h-6 w-6 text-destructive" /></div>
+                    <div className="stat-card flex items-center gap-4 py-3 px-4 shadow-sm border-border/40">
+                        <div className="p-2.5 bg-destructive/10 rounded-xl"><TrendingDown className="h-5 w-5 text-destructive" /></div>
                         <div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Expenses</p>
-                            <p className="text-2xl font-bold text-destructive">₱{totalExpenses.toLocaleString()}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Expenses</p>
+                            <p className="text-xl font-black text-destructive leading-none">₱{totalExpenses.toLocaleString()}</p>
                         </div>
                     </div>
-                    <div className="stat-card flex items-center gap-4">
-                        <div className={`p-3 rounded-2xl ${netCashFlow >= 0 ? "bg-success/10" : "bg-destructive/10"}`}>
-                            <Receipt className={`h-6 w-6 ${netCashFlow >= 0 ? "text-success" : "text-destructive"}`} />
+                    <div className="stat-card flex items-center gap-4 py-3 px-4 shadow-sm border-border/40">
+                        <div className={`p-2.5 rounded-xl ${netCashFlow >= 0 ? "bg-success/10" : "bg-destructive/10"}`}>
+                            <Receipt className={`h-5 w-5 ${netCashFlow >= 0 ? "text-success" : "text-destructive"}`} />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Net Cash Flow</p>
-                            <p className={`text-2xl font-bold ${netCashFlow >= 0 ? "text-success" : "text-destructive"}`}>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Net Cash Flow</p>
+                            <p className={`text-xl font-black leading-none ${netCashFlow >= 0 ? "text-success" : "text-destructive"}`}>
                                 {netCashFlow >= 0 ? "+" : ""}₱{netCashFlow.toLocaleString()}
                             </p>
                         </div>
@@ -253,18 +253,21 @@ const ExpensesPage = () => {
                 </div>
 
                 {/* Breakdown by Category */}
-                <div className="stat-card">
-                    <h3 className="font-semibold text-sm text-foreground mb-4">Expense Breakdown by Category</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="stat-card border-border/40 shadow-sm p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                        <LayoutGrid className="h-4 w-4 text-accent" />
+                        <h3 className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Category Breakdown</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                         {byCategory.map(cat => {
                             const CatIcon = categoryIcons[cat.label];
                             return (
-                                <div key={cat.label} className="text-center p-4 rounded-xl bg-muted/30 border border-border/30 flex flex-col items-center gap-1.5">
-                                    <div className={`p-2 rounded-lg ${categoryColors[cat.label]} border`}>
-                                        <CatIcon className="h-4 w-4" strokeWidth={1.75} />
+                                <div key={cat.label} className="p-3 rounded-xl bg-muted/20 border border-border/30 flex flex-col items-center gap-1 hover:bg-muted/30 transition-colors">
+                                    <div className={`p-1.5 rounded-lg ${categoryColors[cat.label]} border border-current/10 mb-1`}>
+                                        <CatIcon className="h-3.5 w-3.5" strokeWidth={2} />
                                     </div>
-                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{cat.label}</p>
-                                    <p className="text-sm font-bold text-foreground">₱{cat.amount.toLocaleString()}</p>
+                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tight">{cat.label}</p>
+                                    <p className="text-xs font-bold text-foreground">₱{cat.amount.toLocaleString()}</p>
                                 </div>
                             );
                         })}
@@ -410,75 +413,76 @@ const ExpensesPage = () => {
 
                 {/* ── Table ── */}
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                <TableHead>Description</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>
-                                    <span className="flex items-center gap-1">
-                                        Date <SortIcon />
-                                    </span>
-                                </TableHead>
-                                <TableHead className="hidden md:table-cell">Paid By</TableHead>
-                                <TableHead className="hidden md:table-cell">Receipt Ref</TableHead>
-                                <TableHead className="w-[100px]">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-
-                        <TableBody>
-                            {filtered.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-14 text-muted-foreground italic">
-                                        {hasDateFilter
-                                            ? "No expenses found in the selected date range."
-                                            : "No expense records found."}
-                                    </TableCell>
+                    <div className="overflow-x-auto">
+                        <Table className="min-w-[1000px]">
+                            <TableHeader>
+                                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/60">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">Description</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">Category</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 text-right pr-8">Amount</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">
+                                        <span className="flex items-center gap-1">
+                                            Date <SortIcon />
+                                        </span>
+                                    </TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 hidden md:table-cell">Paid By</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 hidden md:table-cell">Receipt Ref</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 text-center w-[100px]">Actions</TableHead>
                                 </TableRow>
-                            ) : groupByMonth ? (
-                                /* ── Grouped by Month ── */
-                                groupedByMonth.map(([ym, rows]) => {
-                                    const isCollapsed = collapsedMonths.has(ym);
-                                    const monthTotal = rows.reduce((s, e) => s + e.amount, 0);
-                                    return (
-                                        <>
-                                            {/* Month header row */}
-                                            <TableRow
-                                                key={`month-${ym}`}
-                                                className="bg-muted/40 hover:bg-muted/50 cursor-pointer select-none"
-                                                onClick={() => toggleMonth(ym)}
-                                            >
-                                                <TableCell colSpan={7} className="py-2.5 px-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            {isCollapsed
-                                                                ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                                : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                                                            <span className="font-bold text-sm text-foreground">
-                                                                {formatMonthGroup(ym)}
+                            </TableHeader>
+
+                            <TableBody>
+                                {filtered.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center py-14 text-muted-foreground italic">
+                                            {hasDateFilter
+                                                ? "No expenses found in the selected date range."
+                                                : "No expense records found."}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : groupByMonth ? (
+                                    /* ── Grouped by Month ── */
+                                    groupedByMonth.map(([ym, rows]) => {
+                                        const isCollapsed = collapsedMonths.has(ym);
+                                        const monthTotal = rows.reduce((s, e) => s + e.amount, 0);
+                                        return (
+                                            <React.Fragment key={`group-${ym}`}>
+                                                {/* Month header row */}
+                                                <TableRow
+                                                    className="bg-muted/20 hover:bg-muted/30 cursor-pointer select-none border-b border-border/40"
+                                                    onClick={() => toggleMonth(ym)}
+                                                >
+                                                    <TableCell colSpan={7} className="py-2 px-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                {isCollapsed
+                                                                    ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                                                    : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                                                                <span className="font-black text-[11px] uppercase tracking-widest text-foreground">
+                                                                    {formatMonthGroup(ym)}
+                                                                </span>
+                                                                <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase px-1.5">
+                                                                    {rows.length} {rows.length === 1 ? "entry" : "entries"}
+                                                                </Badge>
+                                                            </div>
+                                                            <span className="text-xs font-black text-destructive">
+                                                                ₱{monthTotal.toLocaleString()}
                                                             </span>
-                                                            <Badge variant="secondary" className="text-[10px] ml-1">
-                                                                {rows.length} {rows.length === 1 ? "entry" : "entries"}
-                                                            </Badge>
                                                         </div>
-                                                        <span className="text-sm font-bold text-destructive">
-                                                            ₱{monthTotal.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                            {/* Month rows */}
-                                            {!isCollapsed && renderRows(rows)}
-                                        </>
-                                    );
-                                })
-                            ) : (
-                                /* ── Flat list ── */
-                                renderRows(filtered)
-                            )}
-                        </TableBody>
-                    </Table>
+                                                    </TableCell>
+                                                </TableRow>
+                                                {/* Month rows */}
+                                                {!isCollapsed && renderRows(rows)}
+                                            </React.Fragment>
+                                        );
+                                    })
+                                ) : (
+                                    /* ── Flat list ── */
+                                    renderRows(filtered)
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </div>
 
