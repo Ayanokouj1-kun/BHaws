@@ -62,7 +62,7 @@ const Dashboard = () => {
   const myUpcomingPayments = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
     const in3DaysStr = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
-    return myPayments.filter(p => p.status === "Pending" && p.dueDate && p.dueDate >= todayStr && p.dueDate <= in3DaysStr);
+    return myPayments.filter(p => (p.status === "Pending" || p.status === "Unpaid") && p.dueDate && p.dueDate >= todayStr && p.dueDate <= in3DaysStr);
   }, [myPayments]);
 
   const balanceBreakdown = useMemo(() => {
@@ -135,6 +135,7 @@ const Dashboard = () => {
 
     const paidPayments = payments.filter(p => p.status === "Paid");
     const overduePayments = payments.filter(p => p.status === "Overdue");
+    const unpaidPayments = payments.filter(p => p.status === "Unpaid");
     const pendingPayments = payments.filter(p => p.status === "Pending");
     
     const todayStr = new Date().toISOString().split("T")[0];
@@ -157,6 +158,7 @@ const Dashboard = () => {
       upcomingDueCount: upcomingPayments.length,
       upcomingDueTotal: upcomingPayments.reduce((s, p) => s + p.amount, 0),
       pendingCount: pendingPayments.length,
+      unpaidCount: unpaidPayments.length,
       paidCount: paidPayments.length,
       openMaintenance, urgentMaintenance,
     };
@@ -188,6 +190,7 @@ const Dashboard = () => {
   const paymentBreakdown = useMemo(() => [
     { label: "Paid", value: payments.filter(p => p.status === "Paid").length, fill: "hsl(var(--success))" },
     { label: "Pending", value: payments.filter(p => p.status === "Pending").length, fill: "hsl(var(--warning))" },
+    { label: "Unpaid", value: payments.filter(p => p.status === "Unpaid").length, fill: "hsl(var(--accent))" },
     { label: "Overdue", value: payments.filter(p => p.status === "Overdue").length, fill: "hsl(var(--destructive))" },
   ], [payments]);
 
@@ -249,7 +252,7 @@ const Dashboard = () => {
         return {
           name: b.fullName.split(" ")[0],
           paid: bp.filter(p => p.status === "Paid").length,
-          pending: bp.filter(p => p.status === "Pending").length,
+          pending: bp.filter(p => p.status === "Pending" || p.status === "Unpaid").length,
           overdue: bp.filter(p => p.status === "Overdue").length,
         };
       })
@@ -600,7 +603,7 @@ const Dashboard = () => {
                   </div>
                   <p className="text-2xl font-bold text-foreground">{fmt(stats.totalIncome)}</p>
                   <p className="text-xs font-semibold text-muted-foreground mt-0.5">Total Collected</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.paidCount} paid · {stats.pendingCount} pending</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">{stats.paidCount} paid · {stats.pendingCount + stats.unpaidCount} pending/unpaid</p>
                 </CardContent>
               </Card>
 

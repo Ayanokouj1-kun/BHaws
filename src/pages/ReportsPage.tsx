@@ -46,7 +46,7 @@ const ReportsPage = () => {
   const getBoarderName = (boarderId: string) => getBoarder(boarderId)?.fullName ?? "Unknown";
 
   const paidPayments = useMemo(() => payments.filter(p => p.status === "Paid"), [payments]);
-  const unpaidPayments = useMemo(() => payments.filter(p => p.status === "Overdue" || p.status === "Pending"), [payments]);
+  const unpaidPayments = useMemo(() => payments.filter(p => p.status === "Overdue" || p.status === "Pending" || p.status === "Unpaid"), [payments]);
 
   const handleExport = (format: string) => {
     const dateStr = new Date().toISOString().split('T')[0];
@@ -388,6 +388,7 @@ const ReportsPage = () => {
             const statusColor = (s: string) => {
               if (s === "Paid") return "bg-success/10 text-success border-success/20";
               if (s === "Overdue") return "bg-destructive/10 text-destructive border-destructive/20";
+              if (s === "Unpaid") return "bg-zinc-100 text-zinc-600 border-zinc-200";
               return "bg-warning/10 text-warning border-warning/20";
             };
 

@@ -134,7 +134,8 @@ const PaymentsPage = () => {
   const statusStyle = (s: string) =>
     s === "Paid" ? "bg-success/10 text-success border-success/20" :
       s === "Pending" ? "bg-warning/10 text-warning border-warning/20" :
-        "bg-destructive/10 text-destructive border-destructive/20";
+        s === "Unpaid" ? "bg-zinc-100 text-zinc-600 border-zinc-200" :
+          "bg-destructive/10 text-destructive border-destructive/20";
 
   const getBoarderName = (id: string) => boarders.find(b => b.id === id)?.fullName || "Unknown";
 
@@ -351,6 +352,7 @@ const PaymentsPage = () => {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Paid">Paid</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Unpaid">Unpaid</SelectItem>
               <SelectItem value="Overdue">Overdue</SelectItem>
             </SelectContent>
           </Select>
@@ -721,6 +723,7 @@ const PaymentsPage = () => {
                         <SelectContent>
                           <SelectItem value="Paid">Paid</SelectItem>
                           <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Unpaid">Unpaid</SelectItem>
                           <SelectItem value="Overdue">Overdue</SelectItem>
                         </SelectContent>
                       </Select>

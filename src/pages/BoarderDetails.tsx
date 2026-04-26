@@ -256,11 +256,7 @@ const BoarderDetails = () => {
                                                         </TableCell>
                                                         <TableCell className="text-[11px] font-bold px-4 py-2 whitespace-nowrap">₱{p.amount.toLocaleString()}</TableCell>
                                                         <TableCell className="px-4 py-2">
-                                                            <Badge variant="outline" className={
-                                                                `${p.status === "Paid" ? "bg-success/10 text-success border-success/20" :
-                                                                    p.status === "Overdue" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                                                        "bg-warning/10 text-warning border-warning/20"} text-[9px] px-1.5 h-4.5 font-bold uppercase tracking-tighter`
-                                                            }>
+                                                            <Badge variant="outline" className={`${p.status === "Paid" ? "bg-success/10 text-success border-success/20" : p.status === "Overdue" ? "bg-destructive/10 text-destructive border-destructive/20" : p.status === "Unpaid" ? "bg-zinc-100 text-zinc-600 border-zinc-200" : "bg-warning/10 text-warning border-warning/20"} text-[9px] px-1.5 h-4.5 font-bold uppercase tracking-tighter`}>
                                                                 {p.status}
                                                             </Badge>
                                                         </TableCell>
