@@ -374,7 +374,6 @@ const PaymentsPage = () => {
                 <TableHead className="text-[11px]">Boarder</TableHead>
                 <TableHead className="text-[11px] whitespace-nowrap">Type</TableHead>
                 <TableHead className="text-[11px]">Period</TableHead>
-                <TableHead className="text-[11px]">Billing Date</TableHead>
                 <TableHead className="text-[11px]">Due Date</TableHead>
                 <TableHead className="text-[11px]">Date Paid</TableHead>
                 <TableHead className="text-[11px]">Method</TableHead>
@@ -412,9 +411,6 @@ const PaymentsPage = () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-[11px]">{p.month}</TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap">
-                    {p.date || "—"}
-                  </TableCell>
                   <TableCell className="text-[11px] whitespace-nowrap">
                     {p.dueDate || "—"}
                   </TableCell>
@@ -728,26 +724,6 @@ const PaymentsPage = () => {
                   </div>
                 </div>
 
-                {/* ── Section 3: Billing Date (kept on main column) ── */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
-                    <CalendarDays className="h-3 w-3" /> Billing Date
-                  </h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="grid gap-2">
-                      <Label>Billing Date</Label>
-                      <Input
-                        type="date"
-                        value={currentPayment.date || ""}
-                        onChange={(e) => {
-                          const d = e.target.value;
-                          const dd = d ? new Date(new Date(d).setDate(new Date(d).getDate() + 31)).toISOString().split('T')[0] : "";
-                          setCurrentPayment({ ...currentPayment, date: d, dueDate: dd });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
 
                 {/* ── Late Fee ── */}
                 <div className="space-y-2 pt-1">
