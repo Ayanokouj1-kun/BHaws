@@ -59,6 +59,14 @@ const BoarderDetails = () => {
 
     const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
 
+    const totalAdvancePaid = boarderPayments
+        .filter(p => p.type === "Advance" && p.status === "Paid")
+        .reduce((sum, p) => sum + p.amount, 0);
+    
+    const totalDepositPaid = boarderPayments
+        .filter(p => (p.type === "Deposit" || p.type === "Security Deposit") && p.status === "Paid")
+        .reduce((sum, p) => sum + p.amount, 0);
+
     if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
     if (!boarder) return <AppLayout><div>Boarder not found</div></AppLayout>;
 
@@ -186,8 +194,8 @@ const BoarderDetails = () => {
                                 <CardContent className="px-4 pb-3 pt-0">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <p className="text-xs font-semibold text-foreground">Advance: ₱{boarder.advanceAmount.toLocaleString()}</p>
-                                            <p className="text-xs font-semibold text-foreground">Deposit: ₱{boarder.depositAmount.toLocaleString()}</p>
+                                            <p className="text-xs font-semibold text-foreground">Advance: ₱{totalAdvancePaid.toLocaleString()}</p>
+                                            <p className="text-xs font-semibold text-foreground">Deposit: ₱{totalDepositPaid.toLocaleString()}</p>
                                         </div>
                                         <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center text-success">
                                             <CreditCard className="h-4.5 w-4.5" />

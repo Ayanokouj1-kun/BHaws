@@ -94,12 +94,22 @@ const Dashboard = () => {
     const totalPaid = myPayments
       .filter(p => p.status === "Paid")
       .reduce((sum, p) => sum + p.amount, 0);
+
+    const totalAdvance = myPayments
+      .filter(p => p.type === "Advance" && p.status === "Paid")
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    const totalDeposit = myPayments
+      .filter(p => (p.type === "Deposit" || p.type === "Security Deposit") && p.status === "Paid")
+      .reduce((sum, p) => sum + p.amount, 0);
       
     return {
       previous,
       current: currentRent,
       total: previous + currentRent,
-      totalPaid
+      totalPaid,
+      totalAdvance,
+      totalDeposit
     };
   }, [isBoarder, user?.boarderId, myPayments, boarders, rooms]);
 
@@ -417,6 +427,25 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/40">
                        <span className="text-[8px] text-muted-foreground font-bold uppercase">Debt Detail</span>
                        <span className="text-[8px] font-black text-foreground">₱{balanceBreakdown.previous.toLocaleString()} Arr / ₱{balanceBreakdown.current.toLocaleString()} Cur</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/60 shadow-sm bg-accent/5">
+                  <CardHeader className="pb-1.5 px-4 pt-3">
+                    <CardTitle className="text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                      <CreditCard className="h-3.5 w-3.5 text-accent" /> Initial Fees
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Advance: ₱{balanceBreakdown.totalAdvance.toLocaleString()}</p>
+                        <p className="text-xs font-semibold text-foreground">Deposit: ₱{balanceBreakdown.totalDeposit.toLocaleString()}</p>
+                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                        <CreditCard className="h-4.5 w-4.5" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
