@@ -223,12 +223,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         ...p,
                         boarderId: p.boarder_id,
                         amount: parseFloat(p.amount) || 0,
-                        paidDate: p.paid_date,
-                        dueDate: p.due_date,
+                        paidDate: p.paid_date ? p.paid_date.split('T')[0] : p.paid_date,
+                        dueDate: p.due_date ? p.due_date.split('T')[0] : p.due_date,
                         lateFee: lateFee,
                         status: status,
                         receiptNumber: p.receipt_number,
-                        receivedBy: p.received_by,
+                        receivedBy: p.received_by || "Administrator",
                         createdAt: p.created_at
                     };
                 }));

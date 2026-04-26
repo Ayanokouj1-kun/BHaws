@@ -170,7 +170,11 @@ const PaymentsPage = () => {
 
   const handleOpenEdit = (payment: Payment) => {
     setMode("edit");
-    setCurrentPayment(payment);
+    setCurrentPayment({
+      ...payment,
+      paidDate: payment.paidDate ? payment.paidDate.split('T')[0] : undefined,
+      dueDate: payment.dueDate ? payment.dueDate.split('T')[0] : undefined,
+    });
     setIsDialogOpen(true);
   };
 
