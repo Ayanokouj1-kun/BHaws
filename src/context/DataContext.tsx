@@ -536,7 +536,89 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
         toast.success("Boarder added");
         const assignedRoom = rooms.find(r => r.id === boarder.assignedRoomId);
-        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}.`);
+        
+        // --- AUTOMATED INITIAL PAYMENT CREATION ---
+        const rate = assignedRoom?.monthlyRate || 0;
+        const totalPaid = boarder.depositAmount || 0;
+        
+        if (totalPaid > 0) {
+            if (totalPaid >= rate) {
+                // Case 1: Full Payment (possibly with Advance)
+                await supabase.from("payments").insert([
+                    {
+                        boarder_id: nb.id,
+                        type: "Security Deposit",
+                        amount: rate,
+                        month: "Initial Payment",
+                        status: "Paid",
+                        date: boarder.moveInDate,
+                        paid_date: boarder.moveInDate,
+                        admin_id: adminId,
+                        receipt_number: "INIT-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+                        received_by: user?.fullName || "Administrator"
+                    }
+                ]);
+                
+                if (totalPaid > rate) {
+                    await supabase.from("payments").insert([
+                        {
+                            boarder_id: nb.id,
+                            type: "Advance",
+                            amount: totalPaid - rate,
+                            month: "Initial Payment",
+                            status: "Paid",
+                            date: boarder.moveInDate,
+                            paid_date: boarder.moveInDate,
+                            admin_id: adminId,
+                            receipt_number: "ADV-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+                            received_by: user?.fullName || "Administrator"
+                        }
+                    ]);
+                }
+            } else {
+                // Case 2: Partial Payment
+                await supabase.from("payments").insert([
+                    {
+                        boarder_id: nb.id,
+                        type: "Security Deposit",
+                        amount: totalPaid,
+                        month: "Initial Payment",
+                        status: "Paid",
+                        date: boarder.moveInDate,
+                        paid_date: boarder.moveInDate,
+                        admin_id: adminId,
+                        receipt_number: "PART-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+                        received_by: user?.fullName || "Administrator"
+                    },
+                    {
+                        boarder_id: nb.id,
+                        type: "Balance Forward",
+                        amount: rate - totalPaid,
+                        month: "Initial Payment",
+                        status: "Overdue",
+                        date: boarder.moveInDate,
+                        notes: "Unpaid balance from initial deposit requirement.",
+                        admin_id: adminId
+                    }
+                ]);
+            }
+        } else if (rate > 0) {
+            // Case 3: Zero Payment (Full amount forwarded as balance)
+            await supabase.from("payments").insert([
+                {
+                    boarder_id: nb.id,
+                    type: "Balance Forward",
+                    amount: rate,
+                    month: "Initial Payment",
+                    status: "Overdue",
+                    date: boarder.moveInDate,
+                    notes: "Unpaid initial deposit requirement.",
+                    admin_id: adminId
+                }
+            ]);
+        }
+
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}. Initial payments processed.`);
         refreshData();
         return { ...boarder, id: nb.id };
     };
