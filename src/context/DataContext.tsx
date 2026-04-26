@@ -228,6 +228,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         lateFee: lateFee,
                         status: status,
                         receiptNumber: p.receipt_number,
+                        receivedBy: p.received_by,
                         createdAt: p.created_at
                     };
                 }));
@@ -613,7 +614,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
-            method: payment.method, notes: payment.notes, late_fee: payment.lateFee,
+            paid_date: payment.paidDate, method: payment.method, notes: payment.notes, 
+            late_fee: payment.lateFee, received_by: payment.receivedBy || user?.fullName,
             receipt_number: payment.receiptNumber || generateReceiptNumber(),
             admin_id: adminId
         }]);
@@ -630,7 +632,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
             paid_date: payment.paidDate, method: payment.method, late_fee: payment.lateFee,
-            receipt_number: payment.receiptNumber, notes: payment.notes
+            receipt_number: payment.receiptNumber, received_by: payment.receivedBy, 
+            notes: payment.notes
         }).eq("id", payment.id);
         if (error) toast.error("Failed to update payment");
         else {
