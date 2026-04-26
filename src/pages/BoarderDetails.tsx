@@ -65,47 +65,41 @@ const BoarderDetails = () => {
     return (
         <AppLayout>
             <div className="animate-fade-in space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate("/boarders")}>
-                        <ArrowLeft className="h-5 w-5" />
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/boarders")}>
+                        <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <h1 className="page-header">{boarder.fullName}</h1>
-                        <p className="page-subtitle">Boarder Profile & Payment History</p>
+                        <h1 className="text-xl font-black tracking-tight">{boarder.fullName}</h1>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Profile & Payment History</p>
                     </div>
                 </div>
 
-                {overduePayments.length > 0 && (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive shadow-md text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
-                        <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
-                        <span className="flex-1">WARNING: This boarder has {overduePayments.length} overdue payment(s) totaling ₱{overduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}. Please follow up.</span>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span className="flex-1">WARNING: {overduePayments.length} overdue payment(s) totaling ₱{overduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}.</span>
                         {role !== "Boarder" && (
-                            <Button size="sm" className="ml-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3 text-xs font-bold" onClick={() => navigate("/payments")}>
-                                Manage Payments →
+                            <Button size="sm" className="ml-auto bg-destructive text-white h-7 px-2 text-[10px] font-bold" onClick={() => navigate("/payments")}>
+                                Manage Payments
                             </Button>
                         )}
                     </div>
-                )}
 
-                {!hasPaidCurrentMonth && overduePayments.length === 0 && (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 shadow-md text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-warning" />
-                        <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
-                        <span className="flex-1">NOTICE: Monthly rent for the current month ({currentMonthStr}) has not been settled yet.</span>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30 text-[11px] text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span className="flex-1">NOTICE: Rent for {currentMonthStr} has not been settled yet.</span>
                         {role !== "Boarder" && (
-                            <Button size="sm" className="ml-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-3 text-xs font-bold" onClick={() => navigate("/payments")}>
-                                Record Payment →
+                            <Button size="sm" className="ml-auto bg-amber-500 text-white h-7 px-2 text-[10px] font-bold" onClick={() => navigate("/payments")}>
+                                Record Payment
                             </Button>
                         )}
                     </div>
-                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <Card className="lg:col-span-1 shadow-sm border-border/60 overflow-hidden">
-                        <div className="h-32 bg-accent/10 relative">
-                            <div className="absolute -bottom-12 left-6">
-                                <div className="h-24 w-24 rounded-2xl bg-card border-4 border-card shadow-lg flex items-center justify-center text-accent text-3xl font-bold overflow-hidden">
+                        <div className="h-20 bg-accent/10 relative">
+                            <div className="absolute -bottom-10 left-4">
+                                <div className="h-20 w-20 rounded-xl bg-card border-2 border-card shadow-lg flex items-center justify-center text-accent text-2xl font-bold overflow-hidden">
                                     {boarder.profilePhoto ? (
                                         <img src={boarder.profilePhoto} className="h-full w-full object-cover" alt="" />
                                     ) : (
@@ -114,40 +108,40 @@ const BoarderDetails = () => {
                                 </div>
                             </div>
                         </div>
-                        <CardContent className="pt-16 pb-8 space-y-6">
+                        <CardContent className="pt-12 pb-4 px-4 space-y-4">
                             <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-bold text-lg">Personal Information</h3>
-                                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">{boarder.status}</Badge>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Information</h3>
+                                    <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px] px-1.5 h-5">{boarder.status}</Badge>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <div className="p-2 bg-muted rounded-lg"><Mail className="h-4 w-4 text-muted-foreground" /></div>
-                                        <span>{boarder.email || "No email provided"}</span>
+                                <div className="space-y-2.5">
+                                    <div className="flex items-center gap-2 text-[12px]">
+                                        <div className="p-1.5 bg-muted rounded-md"><Mail className="h-3 w-3 text-muted-foreground" /></div>
+                                        <span className="truncate">{boarder.email || "No email"}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <div className="p-2 bg-muted rounded-lg"><Phone className="h-4 w-4 text-muted-foreground" /></div>
+                                    <div className="flex items-center gap-2 text-[12px]">
+                                        <div className="p-1.5 bg-muted rounded-md"><Phone className="h-3 w-3 text-muted-foreground" /></div>
                                         <span>{boarder.contactNumber}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <div className="p-2 bg-muted rounded-lg"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
-                                        <span>{boarder.address}</span>
+                                    <div className="flex items-center gap-2 text-[12px]">
+                                        <div className="p-1.5 bg-muted rounded-md"><MapPin className="h-3 w-3 text-muted-foreground" /></div>
+                                        <span className="truncate">{boarder.address}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        <div className="p-2 bg-muted rounded-lg"><Calendar className="h-4 w-4 text-muted-foreground" /></div>
+                                    <div className="flex items-center gap-2 text-[12px]">
+                                        <div className="p-1.5 bg-muted rounded-md"><Calendar className="h-3 w-3 text-muted-foreground" /></div>
                                         <span>Moved in: {boarder.moveInDate}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t border-border/40">
-                                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-4">Emergency Contact</h3>
-                                <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/10">
-                                    <p className="text-sm font-semibold text-foreground">
+                            <div className="pt-4 border-t border-border/40">
+                                <h3 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Emergency</h3>
+                                <div className="px-3 py-2 rounded-lg bg-destructive/5 border border-destructive/10">
+                                    <p className="text-[11px] font-bold text-foreground">
                                         {emergencyName || "Not specified"}
                                     </p>
                                     {emergencyInfo && (
-                                        <p className="text-xs text-muted-foreground mt-1">{emergencyInfo}</p>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">{emergencyInfo}</p>
                                     )}
                                 </div>
                             </div>
@@ -157,19 +151,19 @@ const BoarderDetails = () => {
                     <div className="lg:col-span-2 space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Card className="shadow-sm border-border/60">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                        <Home className="h-3.5 w-3.5" /> Room Assignment
+                                <CardHeader className="pb-1.5 px-4 pt-3">
+                                    <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                                        <Home className="h-3 w-3" /> Room Assignment
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-3 pt-0">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-2xl font-bold text-foreground">{room?.name || "N/A"}</p>
-                                            <p className="text-sm text-muted-foreground">{bed?.name || "No bed assigned"}</p>
+                                            <p className="text-xl font-bold text-foreground">{room?.name || "N/A"}</p>
+                                            <p className="text-[10px] text-muted-foreground">{bed?.name || "No bed assigned"}</p>
                                         </div>
-                                        <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                                            <Home className="h-6 w-6" />
+                                        <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                                            <Home className="h-4.5 w-4.5" />
                                         </div>
                                     </div>
                                 </CardContent>
@@ -208,8 +202,8 @@ const BoarderDetails = () => {
                                                 {totalOutstanding > 0 ? "Pending Payment(s)" : "Fully Settled"}
                                             </p>
                                         </div>
-                                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${totalOutstanding > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
-                                            <PhilippinePeso className="h-5 w-5" />
+                                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${totalOutstanding > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
+                                            <PhilippinePeso className="h-4 w-4" />
                                         </div>
                                     </div>
                                 </CardContent>
@@ -217,51 +211,55 @@ const BoarderDetails = () => {
                         </div>
 
                         <Card className="shadow-sm border-border/60">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                    <Clock className="h-5 w-5 text-accent" /> Payment History
+                            <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-accent" /> Payment History
                                 </CardTitle>
-                                <Button variant="ghost" size="sm" className="text-accent text-xs">View All</Button>
+                                <Button variant="ghost" size="sm" className="text-accent text-[10px] h-7 px-2 font-bold uppercase tracking-wider" onClick={() => navigate("/payments")}>View All</Button>
                             </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-muted/30">
-                                            <TableHead className="text-xs uppercase font-bold">Month</TableHead>
-                                            <TableHead className="text-xs uppercase font-bold">Receipt #</TableHead>
-                                            <TableHead className="text-xs uppercase font-bold">Type</TableHead>
-                                            <TableHead className="text-xs uppercase font-bold">Amount</TableHead>
-                                            <TableHead className="text-xs uppercase font-bold">Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {boarderPayments.length > 0 ? (
-                                            boarderPayments.map((p) => (
-                                                <TableRow key={p.id} className="hover:bg-muted/20">
-                                                    <TableCell className="text-sm font-medium">{p.month || p.date}</TableCell>
-                                                    <TableCell className="text-xs font-mono text-muted-foreground">{p.receiptNumber || 'N/A'}</TableCell>
-                                                    <TableCell className="text-sm">{p.type}</TableCell>
-                                                    <TableCell className="text-sm font-bold">₱{p.amount.toLocaleString()}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className={
-                                                            p.status === "Paid" ? "bg-success/10 text-success border-success/20" :
-                                                                p.status === "Overdue" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                                                    "bg-warning/10 text-warning border-warning/20"
-                                                        }>
-                                                            {p.status}
-                                                        </Badge>
+                            <CardContent className="px-0 pb-0">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                <TableHead className="text-[10px] uppercase font-black px-4 h-9">Month</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-black px-4 h-9">Receipt #</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-black px-4 h-9">Type</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-black px-4 h-9">Amount</TableHead>
+                                                <TableHead className="text-[10px] uppercase font-black px-4 h-9">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {boarderPayments.length > 0 ? (
+                                                boarderPayments.slice(0, 5).map((p) => (
+                                                    <TableRow key={p.id} className="hover:bg-muted/10">
+                                                        <TableCell className="text-[11px] font-medium px-4 py-2 whitespace-nowrap">{p.month || p.date}</TableCell>
+                                                        <TableCell className="text-[10px] font-mono text-muted-foreground px-4 py-2 whitespace-nowrap uppercase">{p.receiptNumber || 'N/A'}</TableCell>
+                                                        <TableCell className="text-[11px] px-4 py-2 whitespace-nowrap">
+                                                            <span className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground border border-border/40">{p.type}</span>
+                                                        </TableCell>
+                                                        <TableCell className="text-[11px] font-bold px-4 py-2 whitespace-nowrap">₱{p.amount.toLocaleString()}</TableCell>
+                                                        <TableCell className="px-4 py-2">
+                                                            <Badge variant="outline" className={
+                                                                `${p.status === "Paid" ? "bg-success/10 text-success border-success/20" :
+                                                                    p.status === "Overdue" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                                                        "bg-warning/10 text-warning border-warning/20"} text-[9px] px-1.5 h-4.5 font-bold uppercase tracking-tighter`
+                                                            }>
+                                                                {p.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="h-24 text-center text-[11px] text-muted-foreground italic">
+                                                        No records found.
                                                     </TableCell>
                                                 </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
-                                                    No payment history found
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
