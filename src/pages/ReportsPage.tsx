@@ -153,7 +153,7 @@ const ReportsPage = () => {
           ))}
         </div>
 
-        <div className="bg-card border border-border/60 rounded-3xl p-8 shadow-sm min-h-[500px]">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm min-h-[500px]">
           {active === "summary" && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -163,15 +163,15 @@ const ReportsPage = () => {
                 </div>
                 <Badge variant="outline" className="w-fit bg-accent/5 text-accent border-accent/20 font-bold uppercase py-1 px-3">Live Analysis</Badge>
               </div>
-              <div className="grid gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {boarders.map((b) => {
                   const bPayments = payments.filter(p => p.boarderId === b.id);
                   const totalPaid = bPayments.filter(p => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
                   const totalBalance = bPayments.filter(p => p.status !== "Paid").reduce((s, p) => s + p.amount, 0);
                   return (
-                    <div key={b.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-muted/20 border border-border/50 hover:border-accent/30 hover:bg-accent/[0.02] transition-all duration-300">
-                      <div className="flex items-center gap-4 sm:gap-5">
-                        <div className="shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-lg font-bold group-hover:scale-110 transition-transform overflow-hidden">
+                    <div key={b.id} className="group flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border/40 hover:border-accent/30 hover:bg-accent/[0.02] transition-all duration-200">
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0 h-9 w-9 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-xs font-black group-hover:scale-105 transition-transform overflow-hidden">
                           {b.profilePhoto ? (
                             <img src={b.profilePhoto} alt={b.fullName} className="h-full w-full object-cover" />
                           ) : (
@@ -179,24 +179,16 @@ const ReportsPage = () => {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-base text-foreground mb-1">{b.fullName}</p>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Dep: ₱{b.depositAmount.toLocaleString()}</span>
-                            <span className="w-1 h-1 rounded-full bg-border" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Adv: ₱{b.advanceAmount.toLocaleString()}</span>
-                          </div>
+                          <p className="font-bold text-sm text-foreground leading-tight">{b.fullName}</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 mt-0.5">
+                            Adv: ₱{b.advanceAmount.toLocaleString()} • Dep: ₱{b.depositAmount.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex justify-between sm:block sm:text-right border-t sm:border-t-0 border-border/50 pt-3 sm:pt-0 w-full sm:w-auto mt-2 sm:mt-0">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-[10px] text-muted-foreground font-bold uppercase">Collected:</span>
-                          <p className="font-bold text-lg text-success">₱{totalPaid.toLocaleString()}</p>
-                        </div>
+                      <div className="text-right">
+                        <p className="font-black text-sm text-success">₱{totalPaid.toLocaleString()}</p>
                         {totalBalance > 0 && (
-                          <div className="mt-1.5 flex items-center justify-end gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-                            <p className="text-[10px] text-destructive font-bold uppercase">Pending: ₱{totalBalance.toLocaleString()}</p>
-                          </div>
+                          <p className="text-[9px] text-destructive font-black uppercase mt-0.5">Pending: ₱{totalBalance.toLocaleString()}</p>
                         )}
                       </div>
                     </div>
@@ -218,44 +210,43 @@ const ReportsPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Array.from(new Set(paidPayments.map(p => p.month))).filter(Boolean).sort().map((monthLabel) => {
                   const monthlyTotal = paidPayments
                     .filter(p => p.month === monthLabel)
                     .reduce((sum, p) => sum + p.amount, 0);
 
                   return (
-                    <div key={monthLabel} className="group p-8 rounded-3xl bg-muted/20 border border-border/50 hover:bg-card hover:shadow-xl hover:border-accent/20 transition-all duration-300">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-[0.2em]">{monthLabel}</p>
-                        <TrendingUp className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div key={monthLabel} className="group p-5 rounded-2xl bg-muted/20 border border-border/40 hover:bg-card hover:shadow-lg transition-all duration-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{monthLabel}</p>
+                        <TrendingUp className="h-3.5 w-3.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <p className="text-4xl font-extrabold text-foreground tracking-tight">₱{monthlyTotal.toLocaleString()}</p>
-                      <div className="mt-6 flex items-center gap-3">
-                        <div className="h-1 flex-1 bg-muted rounded-full">
-                          <div className="h-full bg-accent rounded-full w-full opacity-60" />
+                      <p className="text-2xl font-black text-foreground tracking-tighter">₱{monthlyTotal.toLocaleString()}</p>
+                      <div className="mt-4 flex items-center gap-2">
+                        <div className="h-1 flex-1 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-accent rounded-full w-full opacity-40" />
                         </div>
-                        <Badge variant="outline" className="text-[9px] font-black uppercase text-success border-success/20 bg-success/5 px-2">Net</Badge>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-                <div className="p-8 rounded-3xl bg-accent/5 border border-accent/10 flex items-center justify-between">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                <div className="p-6 rounded-2xl bg-accent/5 border border-accent/10 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-accent/80 uppercase tracking-widest mb-2">Total Collections</p>
-                    <p className="text-4xl font-extrabold text-foreground">₱{paidPayments.reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
+                    <p className="text-[9px] font-black text-accent/80 uppercase tracking-widest mb-1">Total Collections</p>
+                    <p className="text-3xl font-black text-foreground">₱{paidPayments.reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-accent/10"><PhilippinePeso className="h-8 w-8 text-accent" /></div>
+                  <div className="p-3 rounded-xl bg-accent/10"><PhilippinePeso className="h-6 w-6 text-accent" /></div>
                 </div>
-                <div className="p-8 rounded-3xl bg-success/5 border border-success/10 flex items-center justify-between">
+                <div className="p-6 rounded-2xl bg-success/5 border border-success/10 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-success/80 uppercase tracking-widest mb-2">Utility Recovery</p>
-                    <p className="text-4xl font-extrabold text-foreground">₱{paidPayments.filter(p => p.type === "Utility").reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
+                    <p className="text-[9px] font-black text-success/80 uppercase tracking-widest mb-1">Utility Recovery</p>
+                    <p className="text-3xl font-black text-foreground">₱{paidPayments.filter(p => p.type === "Utility").reduce((s, p) => s + p.amount, 0).toLocaleString()}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-success/10"><TrendingUp className="h-8 w-8 text-success" /></div>
+                  <div className="p-3 rounded-xl bg-success/10"><TrendingUp className="h-6 w-6 text-success" /></div>
                 </div>
               </div>
             </div>
@@ -447,25 +438,25 @@ const ReportsPage = () => {
                 {/* Table */}
                 <div className="border border-border/40 rounded-3xl overflow-x-auto shadow-sm bg-muted/10">
                   <div className="min-w-[800px]">
-                    <div className="grid grid-cols-5 gap-4 px-8 py-5 border-b border-border/40 bg-muted/40 text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em]">
+                    <div className="grid grid-cols-5 gap-4 px-6 py-3 border-b border-border/60 bg-muted/30 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                       <span>Detail</span>
                       <span>Boarder</span>
-                      <span>Amount</span>
-                      <span>Status</span>
-                      <span className="text-right">Timestamp</span>
+                      <span className="text-right pr-4">Amount</span>
+                      <span className="text-center">Status</span>
+                      <span className="text-right pr-4">Date</span>
                     </div>
                     <div className="divide-y divide-border/20">
                     {pageItems.map((p) => {
                       const b = getBoarder(p.boarderId);
                       const name = b?.fullName ?? getBoarderName(p.boarderId);
                       return (
-                        <div key={p.id} className="grid grid-cols-5 gap-4 px-8 py-5 hover:bg-card hover:translate-x-1 transition-all duration-200">
+                        <div key={p.id} className="grid grid-cols-5 gap-4 px-6 py-2.5 hover:bg-accent/[0.03] border-b border-border/30 transition-colors items-center">
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-bold text-foreground truncate">{p.type}</span>
-                            <span className="text-[10px] text-muted-foreground font-bold font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
+                            <span className="text-xs font-bold text-foreground truncate leading-tight">{p.type}</span>
+                            <span className="text-[9px] text-muted-foreground font-mono opacity-50 uppercase tracking-tighter">{p.receiptNumber || 'OR-' + p.id.slice(-6)}</span>
                           </div>
-                          <div className="flex items-center text-sm font-semibold text-foreground truncate gap-2">
-                            <div className="h-6 w-6 rounded-lg bg-accent/5 flex items-center justify-center text-[9px] font-black text-accent border border-accent/10 overflow-hidden shrink-0">
+                          <div className="flex items-center text-xs font-semibold text-foreground truncate gap-2">
+                            <div className="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center text-[9px] font-black text-accent border border-border/60 overflow-hidden shrink-0">
                               {b?.profilePhoto ? (
                                 <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
                               ) : (
@@ -474,15 +465,15 @@ const ReportsPage = () => {
                             </div>
                             <span className="truncate">{name}</span>
                           </div>
-                          <span className={`text-base font-black self-center tracking-tight ${p.status === "Paid" ? "text-success" : p.status === "Overdue" ? "text-destructive" : "text-warning"}`}>₱{p.amount.toLocaleString()}</span>
-                          <div className="self-center">
-                            <Badge variant="outline" className={`text-[9px] font-black uppercase ${statusColor(p.status)}`}>
+                          <span className={`text-sm font-black text-right pr-4 tracking-tighter ${p.status === "Paid" ? "text-success" : p.status === "Overdue" ? "text-destructive" : "text-warning"}`}>₱{p.amount.toLocaleString()}</span>
+                          <div className="text-center">
+                            <Badge variant="outline" className={`text-[8px] font-black uppercase py-0 h-4 ${statusColor(p.status)}`}>
                               {p.status}
                             </Badge>
                           </div>
-                          <div className="text-right self-center">
-                            <span className="text-xs font-bold text-muted-foreground">{p.paidDate || p.date}</span>
-                            {p.month && <p className="text-[9px] text-muted-foreground/50 mt-0.5">{p.month}</p>}
+                          <div className="text-right pr-4">
+                            <span className="text-[10px] font-bold text-muted-foreground">{p.paidDate || p.date}</span>
+                            {p.month && <p className="text-[8px] text-muted-foreground/40 font-bold uppercase tracking-tighter">{p.month}</p>}
                           </div>
                         </div>
                       );

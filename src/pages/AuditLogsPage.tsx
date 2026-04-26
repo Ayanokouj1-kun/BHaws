@@ -2,9 +2,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
 import { Input } from "@/components/ui/input";
 import { Search, Clock, User, Filter, ArrowDownToLine } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 
 import { generateCSV } from "@/utils/csvGenerator";
@@ -133,18 +134,20 @@ const AuditLogsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-sm">
+        {/* ── Filter Bar ── */}
+        <div className="bg-card border border-border/60 rounded-xl p-3 shadow-sm flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by action or details..."
+              placeholder="Search actions or details..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-10"
             />
           </div>
+
           <Select value={entityFilter} onValueChange={setEntityFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-44 h-10">
               <div className="flex items-center gap-2">
                 <Filter className="h-3.5 w-3.5" />
                 <SelectValue placeholder="All Entities" />
@@ -161,54 +164,85 @@ const AuditLogsPage = () => {
               <SelectItem value="Settings">Settings</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="flex items-center gap-1.5 ml-auto">
+            <Button variant="outline" size="sm" className="h-10 px-4 gap-2 rounded-xl" onClick={handleSyncLogs} disabled={isSyncing}>
+              <Clock className="h-3.5 w-3.5" /> 
+              <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? "Syncing" : "Sync"}</span>
+            </Button>
+            <div className="h-6 w-px bg-border/60 mx-1" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" title="Export CSV" onClick={() => handleExportLogs("CSV")}>
+              <ArrowDownToLine className="h-4 w-4" />
+            </Button>
+            <Button variant="default" size="sm" className="h-10 px-4 gap-2 rounded-xl" onClick={() => handleExportLogs("PDF")}>
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">PDF</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest px-2">
-            <Clock className="h-3 w-3" />
-            Recent Activity
-          </div>
-
-          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-            {filtered.map((log) => (
-              <div key={log.id} className="stat-card flex items-start gap-4 hover:shadow-md transition-all group border-border/60">
-                <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center text-lg shrink-0 group-hover:bg-accent/5 transition-colors">
-                  {entityIcon(log.entity)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${actionColor(log.action)}`}>
-                        {log.action}
-                      </span>
-                      <span className="text-xs font-semibold text-foreground/80">{log.entity}</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground font-medium bg-muted/30 px-2 py-0.5 rounded italic">
-                      {log.timestamp}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground leading-relaxed">{log.details}</p>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center">
-                        <User className="h-3 w-3 text-accent" />
+        {/* ── Logs Table ── */}
+        <div className="bg-card border border-border/60 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[1000px]">
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/60">
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 w-[60px] text-center">Type</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">Action</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">Details</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider h-10">Performed By</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider h-10 text-right pr-6">Timestamp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((log) => (
+                  <TableRow key={log.id} className="hover:bg-muted/20 border-b border-border/40 group">
+                    <TableCell className="text-center py-3">
+                      <div className="h-8 w-8 mx-auto rounded-lg bg-muted/50 flex items-center justify-center text-sm group-hover:bg-accent/10 transition-colors">
+                        {entityIcon(log.entity)}
                       </div>
-                      <span className="text-[11px] font-medium">{log.performedBy}</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground/50 font-mono">ID: {log.entityId}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border tracking-tighter ${actionColor(log.action)}`}>
+                          {log.action}
+                        </span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{log.entity}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <p className="text-sm text-foreground max-w-[400px] truncate" title={log.details}>{log.details}</p>
+                      <p className="text-[9px] font-mono text-muted-foreground/50 uppercase mt-0.5 tracking-tighter">Target ID: {log.entityId}</p>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center">
+                          <User className="h-3 w-3 text-accent" />
+                        </div>
+                        <span className="text-xs font-semibold text-foreground">{log.performedBy}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-6 py-3">
+                      <span className="text-[10px] font-bold text-muted-foreground bg-muted/40 px-2 py-1 rounded">
+                        {log.timestamp}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-20">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <Search className="h-8 w-8 opacity-20 mb-3" />
+                        <p className="font-bold text-sm">No activity logs found</p>
+                        <Button variant="link" size="sm" onClick={() => { setSearch(""); setEntityFilter("all"); }} className="text-accent mt-1">Clear all filters</Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-
-          {filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
-              <Search className="h-10 w-10 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground font-medium">No activity logs found matching your criteria</p>
-              <Button variant="link" onClick={() => { setSearch(""); setEntityFilter("all"); }} className="mt-2 text-accent">Clear all filters</Button>
-            </div>
-          )}
         </div>
       </div>
     </AppLayout >
