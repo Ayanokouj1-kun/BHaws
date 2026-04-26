@@ -39,8 +39,22 @@ const BoarderDetails = () => {
     
     const room = rooms.find((r) => r.id === boarder?.assignedRoomId);
     const bed = room?.beds.find((b) => b.id === boarder?.assignedBedId);
-    
+    const roomRate = room?.monthlyRate || 0;
+
+    // 1. Check if they have a specific 'Paid' record
     const hasPaidCurrentMonth = boarderPayments.some(p => p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid");
+    
+    // 2. Calculate dynamic balance (includes room rate even if no record exists yet)
+    const existingMonthlyRent = boarderPayments.find(p => p.type === "Monthly Rent" && p.month === currentMonthStr);
+    const currentRentOwed = existingMonthlyRent 
+        ? (existingMonthlyRent.status !== "Paid" ? existingMonthlyRent.amount : 0)
+        : (boarder?.status === "Active" ? roomRate : 0);
+
+    const previousBalance = boarderPayments
+        .filter(p => p.status !== "Paid" && (p.type !== "Monthly Rent" || p.month !== currentMonthStr))
+        .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0);
+
+    const totalOutstanding = previousBalance + currentRentOwed;
 
     const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
 
@@ -174,6 +188,27 @@ const BoarderDetails = () => {
                                         </div>
                                         <div className="h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center text-success">
                                             <CreditCard className="h-6 w-6" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className={`shadow-sm border-border/60 ${totalOutstanding > 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/5"}`}>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                        <PhilippinePeso className={`h-3.5 w-3.5 ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`} /> Outstanding Balance
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className={`text-2xl font-black ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`}>₱{totalOutstanding.toLocaleString()}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter">
+                                                {totalOutstanding > 0 ? "Pending Payment(s)" : "Fully Settled"}
+                                            </p>
+                                        </div>
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${totalOutstanding > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
+                                            <PhilippinePeso className="h-6 w-6" />
                                         </div>
                                     </div>
                                 </CardContent>

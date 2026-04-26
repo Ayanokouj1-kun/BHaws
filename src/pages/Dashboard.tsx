@@ -66,13 +66,26 @@ const Dashboard = () => {
   }, [myPayments]);
 
   const balanceBreakdown = useMemo(() => {
-    if (!isBoarder) return { previous: 0, current: 0, total: 0, totalPaid: 0 };
+    if (!isBoarder || !user?.boarderId) return { previous: 0, current: 0, total: 0, totalPaid: 0 };
     
     const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+    const boarderProfile = boarders.find(b => b.id === user.boarderId);
+    const room = rooms.find(r => r.id === boarderProfile?.assignedRoomId);
+    const roomRate = room?.monthlyRate || 0;
+
+    // Check if any Monthly Rent record exists for this month
+    const existingMonthlyRent = myPayments.find(p => p.type === "Monthly Rent" && p.month === currentMonthStr);
     
-    const currentRent = myPayments
-      .filter(p => p.status !== "Paid" && p.type === "Monthly Rent" && p.month === currentMonthStr)
-      .reduce((sum, p) => sum + p.amount, 0);
+    let currentRent = 0;
+    if (existingMonthlyRent) {
+      // Use existing record if not paid
+      if (existingMonthlyRent.status !== "Paid") {
+        currentRent = existingMonthlyRent.amount;
+      }
+    } else if (boarderProfile?.status === "Active") {
+      // Assume they owe the room rate if no record exists yet
+      currentRent = roomRate;
+    }
       
     const previous = myPayments
       .filter(p => p.status !== "Paid" && (p.type !== "Monthly Rent" || p.month !== currentMonthStr))
@@ -88,7 +101,7 @@ const Dashboard = () => {
       total: previous + currentRent,
       totalPaid
     };
-  }, [isBoarder, myPayments]);
+  }, [isBoarder, user?.boarderId, myPayments, boarders, rooms]);
 
   // Aggressively show overdue warning
   useEffect(() => {
