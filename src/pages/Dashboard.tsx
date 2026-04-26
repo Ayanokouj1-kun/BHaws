@@ -58,11 +58,32 @@ const Dashboard = () => {
     const todayStr = new Date().toISOString().split("T")[0];
     return myPayments.filter(p => p.status === "Overdue" || (p.status !== "Paid" && p.dueDate && p.dueDate < todayStr));
   }, [myPayments]);
+  
   const myUpcomingPayments = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
     const in3DaysStr = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
     return myPayments.filter(p => p.status === "Pending" && p.dueDate && p.dueDate >= todayStr && p.dueDate <= in3DaysStr);
   }, [myPayments]);
+
+  const balanceBreakdown = useMemo(() => {
+    if (!isBoarder) return { previous: 0, current: 0, total: 0 };
+    
+    const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+    
+    const currentRent = myPayments
+      .filter(p => p.status !== "Paid" && p.type === "Monthly Rent" && p.month === currentMonthStr)
+      .reduce((sum, p) => sum + p.amount, 0);
+      
+    const previous = myPayments
+      .filter(p => p.status !== "Paid" && (p.type !== "Monthly Rent" || p.month !== currentMonthStr))
+      .reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0);
+      
+    return {
+      previous,
+      current: currentRent,
+      total: previous + currentRent
+    };
+  }, [isBoarder, myPayments]);
 
   // Aggressively show overdue warning
   useEffect(() => {
@@ -288,20 +309,27 @@ const Dashboard = () => {
 
         {/* ── Top Level Critical Alerts ──────────────────────────────────── */}
         {isBoarder && myOverduePayments.length > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive shadow-md text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
-            <AlertCircle className="h-5 w-5 shrink-0 animate-pulse" />
-            <span className="flex-1">URGENT: You have {myOverduePayments.length} overdue payment(s) totaling ₱{myOverduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}. Please settle immediately.</span>
-            <Button size="sm" className="ml-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-4 rounded-xl bg-destructive/10 border-2 border-destructive shadow-lg text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-4 relative overflow-hidden ring-2 ring-destructive/20">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-destructive animate-pulse" />
+            <div className="flex items-center gap-3 flex-1">
+              <AlertCircle className="h-6 w-6 shrink-0 animate-bounce" />
+              <div className="space-y-0.5">
+                <p className="text-base uppercase tracking-tight">Immediate Action Required: Overdue Balance Detected</p>
+                <p className="text-xs opacity-90 font-medium">You have {myOverduePayments.length} overdue item(s). Please settle your total balance of ₱{balanceBreakdown.total.toLocaleString()} to avoid further penalties.</p>
+              </div>
+            </div>
+            <Button size="lg" className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-6 text-sm font-black shadow-lg" onClick={() => setPayModalOpen(true)}>
               Pay Now →
             </Button>
           </div>
         )}
         {isBoarder && myOverduePayments.length === 0 && myUpcomingPayments.length > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2">
-            <Clock className="h-5 w-5 shrink-0 animate-pulse text-amber-600 dark:text-amber-400" />
-            Reminder: You have {myUpcomingPayments.length} payment(s) due securely within the next 3 days totaling ₱{myUpcomingPayments.reduce((s,p)=>s+p.amount, 0).toLocaleString()}.
-            <Button size="sm" className="ml-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-3 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3 flex-1">
+              <Clock className="h-5 w-5 shrink-0 animate-pulse text-amber-600 dark:text-amber-400" />
+              <p>Reminder: You have {myUpcomingPayments.length} payment(s) due within 3 days. Total due: ₱{balanceBreakdown.total.toLocaleString()}.</p>
+            </div>
+            <Button size="sm" className="w-full sm:w-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-4 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
               Pay Now →
             </Button>
           </div>
@@ -324,20 +352,52 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-border/60 shadow-sm bg-destructive/5">
+                <Card className={`border-border/60 shadow-sm ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "bg-destructive/5 border-destructive/20 ring-1 ring-destructive/10" : "bg-warning/5 border-warning/20") : "bg-success/5"}`}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <PhilippinePeso className="h-4 w-4 text-destructive" /> Total Balance Owed
+                    <CardTitle className="text-sm font-bold flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <PhilippinePeso className={`h-4 w-4 ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`} />
+                        Current Outstanding Balance
+                      </div>
+                      {balanceBreakdown.total > 0 && (
+                        <Badge variant="outline" className={`text-[8px] uppercase tracking-widest ${myOverduePayments.length > 0 ? "bg-destructive text-white border-none animate-pulse" : "bg-warning/20 text-warning border-warning/30"}`}>
+                          {myOverduePayments.length > 0 ? "Action Required" : "Payment Due"}
+                        </Badge>
+                      )}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-destructive">
-                      ₱{myPayments.filter(p => p.status !== "Paid").reduce((sum, p) => sum + (p.amount + (p.lateFee || 0)), 0).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Includes {myPayments.filter(p => p.status !== "Paid").length} unpaid items
-                      {myOverduePayments.length > 0 && <span className="text-destructive font-bold ml-1">· {myOverduePayments.length} Overdue</span>}
-                    </p>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className={`text-3xl font-black ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`}>
+                        ₱{balanceBreakdown.total.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> Updated as of today
+                      </p>
+                    </div>
+
+                    {balanceBreakdown.total > 0 && (
+                      <div className="pt-3 border-t border-border/40 space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground font-medium">Previous Balance / Arrears:</span>
+                          <span className="font-bold text-foreground">₱{balanceBreakdown.previous.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground font-medium">Current Month Rent:</span>
+                          <span className="font-bold text-foreground">₱{balanceBreakdown.current.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-border/60 text-sm font-black">
+                          <span className="text-foreground">Total Amount Due:</span>
+                          <span className={myOverduePayments.length > 0 ? "text-destructive" : "text-warning"}>₱{balanceBreakdown.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {balanceBreakdown.total === 0 && (
+                      <div className="flex items-center gap-2 text-success font-bold text-xs pt-2">
+                        <CheckCircle2 className="h-4 w-4" /> Your account is fully paid. Thank you!
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1051,15 +1111,28 @@ const Dashboard = () => {
               A penalty of <strong className="text-destructive">₱{settings.lateFeeAmount?.toLocaleString() || "200"} per day</strong> is actively accumulating on your unpaid balance.
             </p>
             
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 my-2">
-              <p className="text-xs font-bold uppercase text-destructive/70 tracking-widest mb-1">Total Outstanding Amount</p>
-              <p className="text-3xl font-black text-destructive">
-                ₱{myOverduePayments.reduce((s,p) => s + p.amount + (p.lateFee || 0), 0).toLocaleString()}
-              </p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 my-2 space-y-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-destructive/70 tracking-widest text-left">Balance Breakdown</p>
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Previous Balance:</span>
+                  <span className="text-foreground">₱{balanceBreakdown.previous.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Current Rent:</span>
+                  <span className="text-foreground">₱{balanceBreakdown.current.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-destructive/20">
+                <p className="text-[10px] font-bold uppercase text-destructive/70 tracking-widest text-left mb-1">Total Outstanding Amount</p>
+                <p className="text-4xl font-black text-destructive">
+                  ₱{balanceBreakdown.total.toLocaleString()}
+                </p>
+              </div>
             </div>
             
             <p className="text-xs font-medium text-destructive/80 italic">
-              Failure to settle this balance immediately may result in further penalties or suspension of your boarding privileges.
+              Failure to settle this balance immediately may result in further penalties (₱{settings.lateFeeAmount || 200}/day) or suspension of privileges.
             </p>
           </div>
           

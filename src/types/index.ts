@@ -48,7 +48,7 @@ export interface Boarder {
 export interface Payment {
   id: string;
   boarderId: string;
-  type: "Advance" | "Deposit" | "Security Deposit" | "Monthly Rent" | "Utility" | "Maintenance" | "Other";
+  type: "Advance" | "Deposit" | "Security Deposit" | "Monthly Rent" | "Utility" | "Maintenance" | "Balance Forward" | "Other";
   amount: number;
   month?: string;
   date?: string;

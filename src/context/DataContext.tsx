@@ -102,8 +102,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
             const getAdminIdFilter = () => {
                 if (!user) return null;
-                // SuperAdmin and Admin each have their own isolated data silo — filter strictly by their own user.id
-                if (user.role === "SuperAdmin" || user.role === "Admin") return user.id || null;
+                // SuperAdmin and Admin each have their own isolated data silo
+                if (user.role === "SuperAdmin" || user.role === "Admin") return user.id;
                 // Staff/Boarders see their manager's data
                 return user.createdBy || null;
             };
@@ -431,7 +431,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- AUDIT LOG ---
     const addLog = async (action: string, entity: string, entityId: string, details: string) => {
         try {
-            const adminId = user?.role === "SuperAdmin" ? null : (user?.role === "Admin" ? user.id : user?.createdBy);
+            const adminId = user?.role === "SuperAdmin" ? user.id : (user?.role === "Admin" ? user.id : user?.createdBy);
             await supabase.from("audit_logs").insert([{
                 action, entity, entity_id: entityId, details, 
                 performed_by: user?.fullName || "System",
@@ -445,7 +445,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
         if (!canWrite) { toast.error("Unauthorized"); return; }
         
-        const adminId = room.adminId || (user?.role === "Admin" ? user.id : null);
+        const adminId = room.adminId || user?.id;
         const underMaintenance = !!room.underMaintenance;
         const initialStatus = underMaintenance ? "Under Maintenance" : "Available";
 
@@ -510,7 +510,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // --- BOARDERS ---
     const addBoarder = async (boarder: Boarder) => {
         if (user?.role === "Boarder") { toast.error("Unauthorized"); return; }
-        const adminId = boarder.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        const adminId = boarder.adminId || user?.id;
         
         const { data: nb, error } = await supabase.from("boarders").insert([{
             full_name: boarder.fullName,
@@ -609,7 +609,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- PAYMENTS ---
     const addPayment = async (payment: Payment) => {
-        const adminId = payment.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        const adminId = payment.adminId || user?.id;
         const { error } = await supabase.from("payments").insert([{
             boarder_id: payment.boarderId, type: payment.type, amount: payment.amount,
             month: payment.month, due_date: payment.dueDate, status: payment.status,
@@ -654,7 +654,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- MAINTENANCE ---
     const addMaintenance = async (req: MaintenanceRequest) => {
-        const adminId = req.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        const adminId = req.adminId || user?.id;
         const { error } = await supabase.from("maintenance_requests").insert([{
             room_id: req.roomId, boarder_id: req.boarderId, title: req.title,
             description: req.description, priority: req.priority, status: req.status,
@@ -700,7 +700,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // --- EXPENSES ---
     const addExpense = async (expense: Expense) => {
-        const adminId = expense.adminId || (user?.role === "Admin" ? user.id : user?.createdBy);
+        const adminId = expense.adminId || user?.id;
         const { error } = await supabase.from("expenses").insert([{
             category: expense.category, description: expense.description,
             amount: expense.amount, date: expense.date, paid_by: expense.paidBy,

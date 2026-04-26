@@ -216,13 +216,13 @@ const PaymentsPage = () => {
           const remainderPayment: Payment = {
             id: `p${Date.now()}_bal`,
             boarderId: boarderId,
-            type: "Other",
+            type: "Balance Forward",
             amount: remainder,
             month: paymentData.month,
             date: paymentData.date,
             dueDate: paymentData.dueDate,
             status: "Overdue",
-            notes: `Balance Forward from partial payment of ${paymentData.month}. Original: ₱${expected}`,
+            notes: `Balance Forward from partial payment of ${paymentData.month}. Original Amount: ₱${expected}`,
             createdAt: new Date().toISOString(),
             adminId: user?.id
           };
@@ -262,7 +262,7 @@ const PaymentsPage = () => {
           const remainderPayment: Payment = {
             ...originalPayment,
             id: `p${Date.now()}_bal`,
-            type: "Other",
+            type: "Balance Forward",
             amount: remainder,
             lateFee: 0,
             status: "Overdue",
@@ -704,6 +704,7 @@ const PaymentsPage = () => {
                           <SelectItem value="Deposit">Deposit</SelectItem>
                           <SelectItem value="Utility">Utility Bill</SelectItem>
                           <SelectItem value="Maintenance">Maintenance Fee</SelectItem>
+                          <SelectItem value="Balance Forward">Balance Forward</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
