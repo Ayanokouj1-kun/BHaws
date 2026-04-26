@@ -379,9 +379,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 .from("profiles").select("*").eq("username", lc).single();
             if (!error && profile && password === lc) {
                 let effectiveRole = profile.role || "Boarder";
-                if (profile.username === "superadmin") effectiveRole = "SuperAdmin";
-                if (profile.username === "admin") effectiveRole = "Admin";
-                if (profile.username === "staff") effectiveRole = "Staff";
+                // Only use hardcoded fallbacks if the database role is missing
+                if (!profile.role) {
+                  if (profile.username === "superadmin") effectiveRole = "SuperAdmin";
+                  else if (profile.username === "admin") effectiveRole = "Admin";
+                  else if (profile.username === "staff") effectiveRole = "Staff";
+                }
 
                 // If this is a Boarder profile, ensure it's linked to an active boarder
                 if (effectiveRole === "Boarder") {
@@ -800,17 +803,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (!adminId) throw new Error("No administrator ID found for settings.");
 
             // 1. Find existing settings for this specific admin
-            const { data: existing } = await supabase
+            const { data: existing, error: fetchError } = await supabase
                 .from("settings")
                 .select("id")
                 .eq("admin_id", adminId)
                 .maybeSingle();
 
+            if (fetchError) throw fetchError;
+
             if (existing) {
                 // 2. Perform a direct UPDATE by Primary Key ID
                 const { error: upError } = await supabase
                     .from("settings")
-                    .update(updatePayload)
+                    .update({ ...updatePayload, admin_id: adminId })
                     .eq("id", existing.id);
                 
                 if (upError) throw upError;
@@ -821,13 +826,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     .insert({ ...updatePayload, admin_id: adminId });
                 
                 if (inError) {
-                    // Critical catch: Table is still in "Single Row" mode
-                    if (inError.message?.includes("settings_pkey") || inError.message?.includes("id = 1")) {
-                        toast.error("Database Error: Duplicate Settings ID. Please run the FIX_SETTINGS_ERROR.sql script in Supabase to enable multiple admins.");
-                        setIsLoading(false);
-                        return;
+                    // Critical catch: Table might have a unique constraint on id = 1 from old migrations
+                    if (inError.message?.includes("settings_pkey") || inError.message?.includes("duplicate key")) {
+                        // Attempt to save without ID to let DB auto-increment (if possible)
+                        const { error: inError2 } = await supabase.from("settings").insert({ ...updatePayload, admin_id: adminId });
+                        if (inError2) throw inError2;
+                    } else {
+                        throw inError;
                     }
-                    throw inError;
                 }
             }
 
