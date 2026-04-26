@@ -536,89 +536,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
         toast.success("Boarder added");
         const assignedRoom = rooms.find(r => r.id === boarder.assignedRoomId);
-        
-        // --- AUTOMATED INITIAL PAYMENT CREATION ---
-        const rate = assignedRoom?.monthlyRate || 0;
-        const totalPaid = boarder.depositAmount || 0;
-        
-        if (totalPaid > 0) {
-            if (totalPaid >= rate) {
-                // Case 1: Full Payment (possibly with Advance)
-                await supabase.from("payments").insert([
-                    {
-                        boarder_id: nb.id,
-                        type: "Security Deposit",
-                        amount: rate,
-                        month: "Initial Payment",
-                        status: "Paid",
-                        date: boarder.moveInDate,
-                        paid_date: boarder.moveInDate,
-                        admin_id: adminId,
-                        receipt_number: "INIT-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-                        received_by: user?.fullName || "Administrator"
-                    }
-                ]);
-                
-                if (totalPaid > rate) {
-                    await supabase.from("payments").insert([
-                        {
-                            boarder_id: nb.id,
-                            type: "Advance",
-                            amount: totalPaid - rate,
-                            month: "Initial Payment",
-                            status: "Paid",
-                            date: boarder.moveInDate,
-                            paid_date: boarder.moveInDate,
-                            admin_id: adminId,
-                            receipt_number: "ADV-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-                            received_by: user?.fullName || "Administrator"
-                        }
-                    ]);
-                }
-            } else {
-                // Case 2: Partial Payment
-                await supabase.from("payments").insert([
-                    {
-                        boarder_id: nb.id,
-                        type: "Security Deposit",
-                        amount: totalPaid,
-                        month: "Initial Payment",
-                        status: "Paid",
-                        date: boarder.moveInDate,
-                        paid_date: boarder.moveInDate,
-                        admin_id: adminId,
-                        receipt_number: "PART-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-                        received_by: user?.fullName || "Administrator"
-                    },
-                    {
-                        boarder_id: nb.id,
-                        type: "Balance Forward",
-                        amount: rate - totalPaid,
-                        month: "Initial Payment",
-                        status: "Overdue",
-                        date: boarder.moveInDate,
-                        notes: "Unpaid balance from initial deposit requirement.",
-                        admin_id: adminId
-                    }
-                ]);
-            }
-        } else if (rate > 0) {
-            // Case 3: Zero Payment (Full amount forwarded as balance)
-            await supabase.from("payments").insert([
-                {
+        const roomRate = assignedRoom?.monthlyRate || 0;
+
+        // 1. Create Monthly Rent payment for the move-in month
+        if (boarder.depositAmount > 0) {
+            const moveInMonth = new Date(boarder.moveInDate).toLocaleString("default", { month: "long", year: "numeric" });
+            const rentAmount = Math.min(boarder.depositAmount, roomRate);
+            
+            await supabase.from("payments").insert([{
+                boarder_id: nb.id,
+                type: "Monthly Rent",
+                amount: rentAmount,
+                month: moveInMonth,
+                date: boarder.moveInDate,
+                dueDate: boarder.moveInDate,
+                paid_date: boarder.moveInDate,
+                status: rentAmount >= roomRate ? "Paid" : "Pending",
+                method: "Cash",
+                notes: "Initial payment during registration",
+                receipt_number: generateReceiptNumber(),
+                admin_id: adminId
+            }]);
+            
+            // 2. Create Security Deposit or Advance payment for the remainder
+            const remainder = boarder.depositAmount - rentAmount;
+            if (remainder > 0) {
+                await supabase.from("payments").insert([{
                     boarder_id: nb.id,
-                    type: "Balance Forward",
-                    amount: rate,
-                    month: "Initial Payment",
-                    status: "Overdue",
+                    type: "Advance",
+                    amount: remainder,
                     date: boarder.moveInDate,
-                    notes: "Unpaid initial deposit requirement.",
+                    paid_date: boarder.moveInDate,
+                    status: "Paid",
+                    method: "Cash",
+                    notes: "Remaining balance from registration fees",
+                    receipt_number: generateReceiptNumber(),
                     admin_id: adminId
-                }
-            ]);
+                }]);
+            }
         }
 
-        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}. Initial payments processed.`);
+        addLog("Boarder Added", "Boarder", nb.id, `${boarder.fullName} was registered and assigned to ${assignedRoom?.name || 'a room'}. Initial fees settled.`);
         refreshData();
         return { ...boarder, id: nb.id };
     };

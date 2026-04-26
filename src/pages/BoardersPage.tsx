@@ -265,12 +265,20 @@ const BoardersPage = () => {
                              <span className="text-[8px] font-bold text-destructive uppercase tracking-wider">Overdue Payment</span>
                            </div>
                         )}
-                        {!payments.some(p => p.boarderId === b.id && p.status === "Overdue") && !payments.some(p => p.boarderId === b.id && p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid") && (
-                           <div className="flex items-center gap-1 mt-1">
-                             <Clock className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
-                             <span className="text-[8px] font-bold text-amber-500 uppercase tracking-wider">Unpaid This Month</span>
-                           </div>
-                        )}
+                        {!payments.some(p => p.boarderId === b.id && p.status === "Overdue") && (() => {
+                           const hasPaid = payments.some(p => p.boarderId === b.id && p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid");
+                           const isNew = b.moveInDate && new Date(b.moveInDate).toLocaleString("default", { month: "long", year: "numeric" }) === currentMonthStr;
+                           const paidInitial = (b.depositAmount || 0) >= (rooms.find(r => r.id === b.assignedRoomId)?.monthlyRate || 0);
+                           
+                           if (hasPaid || (isNew && paidInitial)) return null;
+                           
+                           return (
+                             <div className="flex items-center gap-1 mt-1">
+                               <Clock className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
+                               <span className="text-[8px] font-bold text-amber-500 uppercase tracking-wider">Unpaid This Month</span>
+                             </div>
+                           );
+                        })()}
                       </div>
                     </div>
                   </TableCell>
