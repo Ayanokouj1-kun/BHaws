@@ -96,11 +96,11 @@ const Dashboard = () => {
       .reduce((sum, p) => sum + p.amount, 0);
 
     const totalAdvance = myPayments
-      .filter(p => p.type === "Advance" && p.status === "Paid")
+      .filter(p => p.type?.toLowerCase().includes("advance") && p.status === "Paid")
       .reduce((sum, p) => sum + p.amount, 0);
     
     const totalDeposit = myPayments
-      .filter(p => (p.type === "Deposit" || p.type === "Security Deposit") && p.status === "Paid")
+      .filter(p => p.type?.toLowerCase().includes("deposit") && p.status === "Paid")
       .reduce((sum, p) => sum + p.amount, 0);
       
     return {

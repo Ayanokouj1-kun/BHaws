@@ -60,11 +60,11 @@ const BoarderDetails = () => {
     const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
 
     const totalAdvancePaid = boarderPayments
-        .filter(p => p.type === "Advance" && p.status === "Paid")
+        .filter(p => p.type?.toLowerCase().includes("advance") && p.status === "Paid")
         .reduce((sum, p) => sum + p.amount, 0);
     
     const totalDepositPaid = boarderPayments
-        .filter(p => (p.type === "Deposit" || p.type === "Security Deposit") && p.status === "Paid")
+        .filter(p => p.type?.toLowerCase().includes("deposit") && p.status === "Paid")
         .reduce((sum, p) => sum + p.amount, 0);
 
     if (isLoading) return <AppLayout><div>Loading...</div></AppLayout>;
