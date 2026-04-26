@@ -1137,74 +1137,78 @@ const Dashboard = () => {
           )}
         </DialogContent>
       </Dialog>
-      {/* Massive Overdue Warning Modal */}
+      {/* Overdue Warning Modal — Refined Version */}
       <Dialog open={overdueWarningOpen} onOpenChange={setOverdueWarningOpen}>
-        <DialogContent className="max-w-md border-destructive border-2 shadow-2xl shadow-destructive/50 overflow-hidden sm:rounded-2xl">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive animate-pulse" />
-          <DialogHeader className="pt-6 pb-2 text-center space-y-3">
-            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center border-4 border-destructive/20 relative">
-              <div className="absolute inset-0 rounded-full border border-destructive animate-ping opacity-50" />
-              <AlertTriangle className="h-8 w-8 text-destructive" />
-            </div>
-            <DialogTitle className="text-2xl font-black text-destructive uppercase tracking-widest">
-              Account Overdue
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="text-center space-y-4 py-4 px-2">
-            <p className="text-sm font-semibold text-foreground">
-              Dear <span className="text-destructive">{user?.fullName || "Boarder"}</span>,
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Our records indicate that you have <strong className="text-foreground">{myOverduePayments.length}</strong> overdue payment(s). 
-              A penalty of <strong className="text-destructive">₱{settings.lateFeeAmount?.toLocaleString() || "200"} per day</strong> is actively accumulating on your unpaid balance.
-            </p>
-            
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 my-2 space-y-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase text-destructive/70 tracking-widest text-left">Balance Breakdown</p>
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Previous Balance:</span>
-                  <span className="text-foreground">₱{balanceBreakdown.previous.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Current Rent:</span>
-                  <span className="text-foreground">₱{balanceBreakdown.current.toLocaleString()}</span>
-                </div>
+        <DialogContent className="max-w-[360px] border-destructive/20 border shadow-2xl shadow-destructive/10 overflow-hidden sm:rounded-2xl p-0">
+          <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
+          <div className="p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
-              <div className="pt-2 border-t border-destructive/20">
-                <p className="text-[10px] font-bold uppercase text-destructive/70 tracking-widest text-left mb-1">Total Outstanding Amount</p>
-                <p className="text-4xl font-black text-destructive">
-                  ₱{balanceBreakdown.total.toLocaleString()}
-                </p>
+              <div>
+                <DialogTitle className="text-sm font-black text-destructive uppercase tracking-widest leading-none">
+                  Account Overdue
+                </DialogTitle>
+                <p className="text-[10px] text-muted-foreground font-medium mt-1">Payment balance requires attention</p>
               </div>
             </div>
             
-            <p className="text-xs font-medium text-destructive/80 italic">
-              Failure to settle this balance immediately may result in further penalties (₱{settings.lateFeeAmount || 200}/day) or suspension of privileges.
-            </p>
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Dear <span className="font-bold text-foreground">{user?.fullName?.split(' ')[0] || "Boarder"}</span>, 
+                you have <strong className="text-foreground">{myOverduePayments.length}</strong> overdue payment(s) pending settlement.
+              </p>
+              
+              <div className="bg-destructive/[0.03] border border-destructive/10 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-destructive/60 tracking-widest mb-1">Total Outstanding</p>
+                    <p className="text-2xl font-black text-destructive tracking-tighter">
+                      ₱{balanceBreakdown.total.toLocaleString()}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[8px] h-4 bg-destructive text-white border-none">LATE FEE ACTIVE</Badge>
+                </div>
+                
+                <div className="pt-3 border-t border-destructive/10 space-y-1">
+                  <div className="flex justify-between text-[10px] font-medium">
+                    <span className="text-muted-foreground">Previous Balance</span>
+                    <span className="text-foreground">₱{balanceBreakdown.previous.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] font-medium">
+                    <span className="text-muted-foreground">Current Rent</span>
+                    <span className="text-foreground">₱{balanceBreakdown.current.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-[10px] font-medium text-destructive/70 bg-destructive/5 p-2 rounded-lg border border-destructive/10 italic text-center">
+                Penalty: ₱{settings.lateFeeAmount || 200}/day is accumulating
+              </p>
+            </div>
+            
+            <div className="grid gap-2">
+              <Button 
+                size="lg" 
+                className="w-full h-11 bg-destructive text-white hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest rounded-xl"
+                onClick={() => {
+                  setOverdueWarningOpen(false);
+                  setPayModalOpen(true);
+                }}
+              >
+                Pay via GCash
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full h-9 text-[10px] text-muted-foreground hover:bg-muted rounded-xl"
+                onClick={() => setOverdueWarningOpen(false)}
+              >
+                I will settle this later
+              </Button>
+            </div>
           </div>
-          
-          <DialogFooter className="pb-2 pt-2 gap-2 flex-col sm:flex-col">
-            <Button 
-              size="lg" 
-              className="w-full bg-destructive text-white hover:bg-destructive/90 font-bold text-sm tracking-wider uppercase"
-              onClick={() => {
-                setOverdueWarningOpen(false);
-                setPayModalOpen(true);
-              }}
-            >
-              Pay Now via GCash
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full text-xs text-muted-foreground hover:bg-muted"
-              onClick={() => setOverdueWarningOpen(false)}
-            >
-              I will settle this later
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
