@@ -359,79 +359,55 @@ const Dashboard = () => {
             <div className="lg:col-span-2 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-border/60 shadow-sm bg-accent/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <Home className="h-4 w-4 text-accent" /> My Room
+                  <CardHeader className="pb-1.5 px-4 pt-3">
+                    <CardTitle className="text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                      <Home className="h-3.5 w-3.5 text-accent" /> My Room
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-foreground">{myRoom?.name || "No Assignment"}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{myBed?.name || "No Bed Assigned"} · Floor {myRoom?.floor || "-"}</p>
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-xl font-bold text-foreground">{myRoom?.name || "No Assignment"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{myBed?.name || "No Bed Assigned"} · Floor {myRoom?.floor || "-"}</p>
                   </CardContent>
                 </Card>
 
                 <Card className="border-border/60 shadow-sm bg-success/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-success" /> Total Paid to Date
+                  <CardHeader className="pb-1.5 px-4 pt-3">
+                    <CardTitle className="text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success" /> Total Paid to Date
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-black text-success">
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className="text-xl font-black text-success">
                       ₱{balanceBreakdown.totalPaid.toLocaleString()}
                     </p>
-                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                      Successful payments recorded
+                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">
+                      Payments recorded
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card className={`border-border/60 shadow-sm ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "bg-destructive/5 border-destructive/20 ring-1 ring-destructive/10" : "bg-warning/5 border-warning/20") : "bg-success/5"}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <PhilippinePeso className={`h-4 w-4 ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`} />
-                        Current Outstanding Balance
+                  <CardHeader className="pb-1.5 px-4 pt-3">
+                    <CardTitle className="text-[10px] font-bold flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 uppercase tracking-wider">
+                        <PhilippinePeso className={`h-3.5 w-3.5 ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`} />
+                        Outstanding Balance
                       </div>
                       {balanceBreakdown.total > 0 && (
-                        <Badge variant="outline" className={`text-[8px] uppercase tracking-widest ${myOverduePayments.length > 0 ? "bg-destructive text-white border-none animate-pulse" : "bg-warning/20 text-warning border-warning/30"}`}>
-                          {myOverduePayments.length > 0 ? "Action Required" : "Payment Due"}
+                        <Badge variant="outline" className={`text-[7px] h-3.5 px-1 uppercase tracking-tighter ${myOverduePayments.length > 0 ? "bg-destructive text-white border-none animate-pulse" : "bg-warning/20 text-warning border-warning/30"}`}>
+                          {myOverduePayments.length > 0 ? "Overdue" : "Due"}
                         </Badge>
                       )}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className={`text-3xl font-black ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`}>
-                        ₱{balanceBreakdown.total.toLocaleString()}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1 flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> Updated as of today
-                      </p>
+                  <CardContent className="px-4 pb-3 pt-0">
+                    <p className={`text-xl font-black ${balanceBreakdown.total > 0 ? (myOverduePayments.length > 0 ? "text-destructive" : "text-warning") : "text-success"}`}>
+                      ₱{balanceBreakdown.total.toLocaleString()}
+                    </p>
+                    <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/40">
+                       <span className="text-[8px] text-muted-foreground font-bold uppercase">Debt Detail</span>
+                       <span className="text-[8px] font-black text-foreground">₱{balanceBreakdown.previous.toLocaleString()} Arr / ₱{balanceBreakdown.current.toLocaleString()} Cur</span>
                     </div>
-
-                    {balanceBreakdown.total > 0 && (
-                      <div className="pt-3 border-t border-border/40 space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground font-medium">Previous Balance / Arrears:</span>
-                          <span className="font-bold text-foreground">₱{balanceBreakdown.previous.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground font-medium">Current Month Rent:</span>
-                          <span className="font-bold text-foreground">₱{balanceBreakdown.current.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-border/60 text-sm font-black">
-                          <span className="text-foreground">Total Amount Due:</span>
-                          <span className={myOverduePayments.length > 0 ? "text-destructive" : "text-warning"}>₱{balanceBreakdown.total.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {balanceBreakdown.total === 0 && (
-                      <div className="flex items-center gap-2 text-success font-bold text-xs pt-2">
-                        <CheckCircle2 className="h-4 w-4" /> Your account is fully paid. Thank you!
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>

@@ -15,7 +15,8 @@ import {
     Clock,
     Printer,
     FileText,
-    AlertCircle
+    AlertCircle,
+    PhilippinePeso
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -175,40 +176,40 @@ const BoarderDetails = () => {
                             </Card>
 
                             <Card className="shadow-sm border-border/60">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                        <CreditCard className="h-3.5 w-3.5" /> Initial Fees
+                                <CardHeader className="pb-1.5 px-4 pt-3">
+                                    <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                                        <CreditCard className="h-3 w-3" /> Initial Fees
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-3 pt-0">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <p className="text-sm font-medium text-foreground">Advance: ₱{boarder.advanceAmount.toLocaleString()}</p>
-                                            <p className="text-sm font-medium text-foreground">Deposit: ₱{boarder.depositAmount.toLocaleString()}</p>
+                                            <p className="text-xs font-semibold text-foreground">Advance: ₱{boarder.advanceAmount.toLocaleString()}</p>
+                                            <p className="text-xs font-semibold text-foreground">Deposit: ₱{boarder.depositAmount.toLocaleString()}</p>
                                         </div>
-                                        <div className="h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center text-success">
-                                            <CreditCard className="h-6 w-6" />
+                                        <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center text-success">
+                                            <CreditCard className="h-4.5 w-4.5" />
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <Card className={`shadow-sm border-border/60 ${totalOutstanding > 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/5"}`}>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                        <PhilippinePeso className={`h-3.5 w-3.5 ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`} /> Outstanding Balance
+                                <CardHeader className="pb-1.5 px-4 pt-3">
+                                    <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                                        <PhilippinePeso className={`h-3 w-3 ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`} /> Outstanding Balance
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-3 pt-0">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <p className={`text-2xl font-black ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`}>₱{totalOutstanding.toLocaleString()}</p>
-                                            <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter">
+                                            <p className={`text-xl font-black ${totalOutstanding > 0 ? "text-destructive" : "text-success"}`}>₱{totalOutstanding.toLocaleString()}</p>
+                                            <p className="text-[8px] text-muted-foreground mt-0.5 uppercase font-bold tracking-tight">
                                                 {totalOutstanding > 0 ? "Pending Payment(s)" : "Fully Settled"}
                                             </p>
                                         </div>
-                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${totalOutstanding > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
-                                            <PhilippinePeso className="h-6 w-6" />
+                                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${totalOutstanding > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
+                                            <PhilippinePeso className="h-5 w-5" />
                                         </div>
                                     </div>
                                 </CardContent>
