@@ -103,6 +103,9 @@ const Dashboard = () => {
     };
   }, [isBoarder, user?.boarderId, myPayments, boarders, rooms]);
 
+  const currentMonthStr = useMemo(() => new Date().toLocaleString("default", { month: "long", year: "numeric" }), []);
+  const hasPaidCurrentMonth = useMemo(() => isBoarder && myPayments.some(p => p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid"), [isBoarder, myPayments, currentMonthStr]);
+
   // Aggressively show overdue warning
   useEffect(() => {
     if (isBoarder && myOverduePayments.length > 0) {
