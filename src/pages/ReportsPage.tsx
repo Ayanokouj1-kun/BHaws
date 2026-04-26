@@ -262,17 +262,17 @@ const ReportsPage = () => {
                 <Badge variant="destructive" className="w-fit bg-destructive/10 text-destructive border-none font-bold py-1 px-4 text-xs animate-pulse">Critical View</Badge>
               </div>
               {unpaidPayments.length > 0 ? (
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {unpaidPayments.map((p) => {
                     const b = getBoarder(p.boarderId);
                     const name = b?.fullName ?? getBoarderName(p.boarderId);
                     return (
                       <div
                         key={p.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-destructive/[0.03] border border-destructive/10 hover:bg-destructive/[0.05] transition-colors"
+                        className="flex items-center justify-between gap-4 p-4 rounded-xl bg-destructive/[0.03] border border-destructive/10 hover:bg-destructive/[0.05] transition-colors"
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive text-sm font-bold overflow-hidden">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive text-xs font-black overflow-hidden">
                             {b?.profilePhoto ? (
                               <img src={b.profilePhoto} alt={name} className="h-full w-full object-cover" />
                             ) : (
@@ -280,23 +280,17 @@ const ReportsPage = () => {
                             )}
                           </div>
                           <div>
-                            <p className="font-bold text-base text-foreground leading-tight">{name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span
-                                className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"
-                                  }`}
-                              >
-                                {p.status}
-                              </span>
-                              <span className="text-[10px] font-bold text-muted-foreground opacity-60">
-                                MONTH: {p.month || p.date}
-                              </span>
-                            </div>
+                            <p className="font-bold text-sm text-foreground leading-tight">{name}</p>
+                            <p className="text-[9px] font-black text-destructive/60 uppercase tracking-tight mt-0.5">
+                              {p.month || p.date} • {p.type}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex justify-between sm:block sm:text-right border-t sm:border-t-0 border-destructive/10 pt-3 sm:pt-0 w-full sm:w-auto mt-2 sm:mt-0">
-                          <p className="font-black text-xl text-destructive">₱{p.amount.toLocaleString()}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">{p.type}</p>
+                        <div className="text-right">
+                          <p className="font-black text-sm text-destructive">₱{p.amount.toLocaleString()}</p>
+                          <Badge variant="outline" className={`text-[8px] font-black uppercase h-4 px-1.5 border-none ${p.status === "Overdue" ? "bg-destructive text-white" : "bg-warning/20 text-warning"}`}>
+                            {p.status}
+                          </Badge>
                         </div>
                       </div>
                     );
@@ -320,38 +314,36 @@ const ReportsPage = () => {
                 <h3 className="font-bold text-xl text-foreground">Occupancy Audit</h3>
                 <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest font-semibold opacity-60">Beds Distribution and Room Status</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {rooms.map((r) => {
                   const occupied = r.beds.filter(b => b.status === "Occupied").length;
                   const pct = Math.round((occupied / r.capacity) * 100);
                   const isFull = occupied === r.capacity;
 
                   return (
-                    <div key={r.id} className="p-6 rounded-3xl bg-muted/20 border border-border/50 hover:border-accent/20 transition-all duration-300 group">
-                      <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-colors ${isFull ? "bg-accent/10" : "bg-success/10"}`}>
-                            <DoorOpen className={`h-5 w-5 ${isFull ? "text-accent" : "text-success"}`} />
+                    <div key={r.id} className="p-4 rounded-xl bg-muted/20 border border-border/40 hover:border-accent/20 transition-all duration-200 group">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${isFull ? "bg-accent/10" : "bg-success/10"}`}>
+                            <DoorOpen className={`h-4 w-4 ${isFull ? "text-accent" : "text-success"}`} />
                           </div>
                           <div className="min-w-0">
-                            <div className="marquee-container overflow-hidden">
-                              <p className="font-bold text-base text-foreground leading-tight marquee-scroll" title={r.name}>
-                                {r.name}
-                              </p>
-                            </div>
-                            <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase tracking-widest mt-0.5">Floor {r.floor || 1}</p>
+                            <p className="font-bold text-sm text-foreground leading-tight truncate max-w-[100px]" title={r.name}>
+                              {r.name}
+                            </p>
+                            <p className="text-[9px] font-black text-muted-foreground opacity-40 uppercase tracking-widest">Floor {r.floor || 1}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-[9px] font-black uppercase px-2 py-0 border-none ${isFull ? "bg-accent/10 text-accent" : "bg-success/10 text-success"}`}>
+                        <Badge variant="outline" className={`text-[8px] font-black uppercase h-4 px-1.5 border-none ${isFull ? "bg-accent/10 text-accent" : "bg-success/10 text-success"}`}>
                           {isFull ? "FULL" : `${occupied}/${r.capacity}`}
                         </Badge>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-muted-foreground uppercase opacity-40">
-                          <span>Utilization</span>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center text-[8px] font-black tracking-widest text-muted-foreground uppercase opacity-30">
+                          <span>UTILIZATION</span>
                           <span>{pct}%</span>
                         </div>
-                        <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                        <div className="flex-1 bg-muted rounded-full h-1 overflow-hidden">
                           <div
                             className={`h-full transition-all duration-1000 ease-out rounded-full ${isFull ? "bg-accent" : "bg-success"}`}
                             style={{ width: `${pct}%` }}
