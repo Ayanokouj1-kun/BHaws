@@ -544,12 +544,12 @@ const PaymentsPage = () => {
                             ? getDefaultAmountForBoarder(val)
                             : currentPayment.amount;
                         
-                        // Calculate default due date for the selected month/year
+                        // Calculate billing date for the selected month/year
                         const [m, y] = getMonthYearParts(currentPayment.month);
                         const monthIdx = months.indexOf(m);
                         const yearNum = parseInt(y) || new Date().getFullYear();
                         const billingDate = new Date(yearNum, monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                        const dueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+                        const dueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
 
                         setCurrentPayment({ 
                           ...currentPayment, 
@@ -635,7 +635,7 @@ const PaymentsPage = () => {
                             const yearToUse = yearPart || new Date().getFullYear().toString();
                             const monthIdx = months.indexOf(val);
                             const billingDate = new Date(parseInt(yearToUse), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                            const newDueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+                            const newDueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
                             setCurrentPayment({ ...currentPayment, month: `${val} ${yearToUse}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
@@ -658,7 +658,7 @@ const PaymentsPage = () => {
                               monthPart || new Date().toLocaleString("default", { month: "long" });
                             const monthIdx = months.indexOf(monthToUse);
                             const billingDate = new Date(parseInt(val), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                            const newDueDate = new Date(new Date(billingDate).setDate(new Date(billingDate).getDate() + 31)).toISOString().split('T')[0];
+                            const newDueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
                             setCurrentPayment({ ...currentPayment, month: `${monthToUse} ${val}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
