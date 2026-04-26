@@ -10,7 +10,6 @@ interface ExportConfig {
 }
 
 export const generatePDF = (config: ExportConfig) => {
-    // Standard A4 orientation logic
     const isWide = config.headers.length > 5;
     const doc = new jsPDF({
         orientation: isWide ? "landscape" : "portrait",
@@ -19,84 +18,88 @@ export const generatePDF = (config: ExportConfig) => {
     });
 
     const themeColor = [15, 23, 42]; // Slate-900
-    const accentColor = [79, 70, 229]; // Indigo-600
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 10; // Slightly smaller margin for more space
 
     // ── Header ──
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
+    doc.setFontSize(18);
     doc.setTextColor(themeColor[0], themeColor[1], themeColor[2]);
-    doc.text(config.title.toUpperCase(), margin, 20);
+    doc.text(config.title.toUpperCase(), margin, 15);
 
     if (config.subtitle) {
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(8);
         doc.setTextColor(100);
-        const splitSubtitle = doc.splitTextToSize(config.subtitle, pageWidth - (margin * 2));
-        doc.text(splitSubtitle, margin, 26);
+        doc.text(config.subtitle, margin, 20);
     }
 
     // Divider
     doc.setDrawColor(220);
-    doc.setLineWidth(0.5);
-    doc.line(margin, 35, pageWidth - margin, 35);
+    doc.setLineWidth(0.2);
+    doc.line(margin, 25, pageWidth - margin, 25);
 
-    // Meta Info (Right aligned)
-    doc.setFontSize(8);
+    // Meta Info
+    doc.setFontSize(7);
     doc.setTextColor(150);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin, 15, { align: 'right' });
-    doc.text("BHaws Management System", pageWidth - margin, 19, { align: 'right' });
+    doc.text(`Exported: ${new Date().toLocaleString()}`, pageWidth - margin, 12, { align: 'right' });
 
     // ── Table ──
+    // Dynamically calculate font size based on column count to avoid "cutting"
+    const baseFontSize = config.headers.length > 8 ? 6 : config.headers.length > 5 ? 7 : 8;
+
     autoTable(doc, {
         head: [config.headers],
         body: config.data,
-        startY: 40,
+        startY: 30,
         theme: 'grid',
         headStyles: {
             fillColor: themeColor,
             textColor: [255, 255, 255],
-            fontSize: 9,
+            fontSize: baseFontSize,
             fontStyle: 'bold',
             halign: 'left',
-            cellPadding: 4,
+            cellPadding: 3,
         },
         styles: {
-            fontSize: 8,
-            cellPadding: 3,
+            fontSize: baseFontSize - 0.5,
+            cellPadding: 2,
             overflow: 'linebreak',
             valign: 'middle',
+            lineWidth: 0.1,
+            lineColor: [230, 230, 230],
         },
         columnStyles: {
-            // Right align numeric values if they are currency
             ...config.headers.reduce((acc: any, header, idx) => {
                 const h = header.toLowerCase();
-                if (h.includes('amount') || h.includes('rate') || h.includes('balance') || h.includes('total') || h.includes('collected')) {
+                // Professional alignment
+                if (h.includes('amount') || h.includes('rate') || h.includes('balance') || h.includes('total') || h.includes('collected') || h.includes('price')) {
                     acc[idx] = { halign: 'right', fontStyle: 'bold' };
+                } else if (h.includes('status') || h.includes('type') || h.includes('date')) {
+                    acc[idx] = { halign: 'center' };
+                }
+                
+                // Assign more width to descriptions/details
+                if (h.includes('detail') || h.includes('description') || h.includes('name')) {
+                    acc[idx] = { ...acc[idx], cellWidth: 'auto' };
                 }
                 return acc;
             }, {})
         },
         alternateRowStyles: {
-            fillColor: [249, 250, 251],
+            fillColor: [252, 252, 253],
         },
-        margin: { top: 40, left: margin, right: margin, bottom: 20 },
+        margin: { top: 30, left: margin, right: margin, bottom: 15 },
         didDrawPage: (data) => {
-            // ── Footer ──
-            doc.setFontSize(8);
-            doc.setTextColor(150);
+            doc.setFontSize(7);
+            doc.setTextColor(180);
             const str = `Page ${doc.internal.getNumberOfPages()}`;
-            doc.text(str, pageWidth / 2, pageHeight - 10, { align: 'center' });
-            
-            // Footer Branding
-            doc.setFont("helvetica", "italic");
-            doc.text("Official System Report - Confidentail", margin, pageHeight - 10);
+            doc.text(str, pageWidth / 2, pageHeight - 7, { align: 'center' });
+            doc.text("BHaws Management System - Professional Report", margin, pageHeight - 7);
         }
     });
 
-    // Save PDF
     doc.save(`${config.fileName}.pdf`);
 };
 export const generateReceipt = (data: {
