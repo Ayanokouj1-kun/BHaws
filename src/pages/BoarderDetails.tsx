@@ -75,6 +75,7 @@ const BoarderDetails = () => {
                     </div>
                 </div>
 
+                {overduePayments.length > 0 && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span className="flex-1">WARNING: {overduePayments.length} overdue payment(s) totaling ₱{overduePayments.reduce((s,p)=>s+p.amount+(p.lateFee||0), 0).toLocaleString()}.</span>
@@ -84,16 +85,23 @@ const BoarderDetails = () => {
                             </Button>
                         )}
                     </div>
+                )}
 
+                {!hasPaidCurrentMonth && overduePayments.length === 0 && boarder.status === "Active" && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30 text-[11px] text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
                         <AlertCircle className="h-4 w-4 shrink-0" />
-                        <span className="flex-1">NOTICE: Rent for {currentMonthStr} has not been settled yet.</span>
+                        <span className="flex-1">
+                            {existingMonthlyRent 
+                                ? `NOTICE: Rent for ${currentMonthStr} is currently ${existingMonthlyRent.status.toLowerCase()}.` 
+                                : `NOTICE: No payment record found for ${currentMonthStr} rent.`}
+                        </span>
                         {role !== "Boarder" && (
                             <Button size="sm" className="ml-auto bg-amber-500 text-white h-7 px-2 text-[10px] font-bold" onClick={() => navigate("/payments")}>
-                                Record Payment
+                                {existingMonthlyRent ? "Manage Payment" : "Record Payment"}
                             </Button>
                         )}
                     </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <Card className="lg:col-span-1 shadow-sm border-border/60 overflow-hidden">

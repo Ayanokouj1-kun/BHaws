@@ -327,28 +327,35 @@ const Dashboard = () => {
 
         {/* ── Top Level Critical Alerts ──────────────────────────────────── */}
         {isBoarder && myOverduePayments.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-4 rounded-xl bg-destructive/10 border-2 border-destructive shadow-lg text-sm text-destructive font-bold animate-in fade-in slide-in-from-top-4 relative overflow-hidden ring-2 ring-destructive/20">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-destructive animate-pulse" />
-            <div className="flex items-center gap-3 flex-1">
-              <AlertCircle className="h-6 w-6 shrink-0 animate-bounce" />
-              <div className="space-y-0.5">
-                <p className="text-base uppercase tracking-tight">Immediate Action Required: Overdue Balance Detected</p>
-                <p className="text-xs opacity-90 font-medium">You have {myOverduePayments.length} overdue item(s). Please settle your total balance of ₱{balanceBreakdown.total.toLocaleString()} to avoid further penalties.</p>
-              </div>
-            </div>
-            <Button size="lg" className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-6 text-sm font-black shadow-lg" onClick={() => setPayModalOpen(true)}>
-              Pay Now →
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-[11px]">WARNING: You have {myOverduePayments.length} overdue payment(s) totaling ₱{balanceBreakdown.total.toLocaleString()}.</span>
+            <Button size="sm" className="ml-auto bg-destructive text-white h-7 px-3 text-[10px] font-bold" onClick={() => setPayModalOpen(true)}>
+              Settle Now
             </Button>
           </div>
         )}
-        {isBoarder && myOverduePayments.length === 0 && myUpcomingPayments.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-3 rounded-xl bg-warning/20 border border-warning/50 text-sm text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-3 flex-1">
-              <Clock className="h-5 w-5 shrink-0 animate-pulse text-amber-600 dark:text-amber-400" />
-              <p>Reminder: You have {myUpcomingPayments.length} payment(s) due within 3 days. Total due: ₱{balanceBreakdown.total.toLocaleString()}.</p>
-            </div>
-            <Button size="sm" className="w-full sm:w-auto bg-amber-500 text-white hover:bg-amber-600 h-8 px-4 text-xs font-bold" onClick={() => setPayModalOpen(true)}>
-              Pay Now →
+
+        {isBoarder && myOverduePayments.length === 0 && !hasPaidCurrentMonth && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30 text-[11px] text-amber-600 dark:text-amber-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-[11px]">
+              {myPayments.find(p => p.type === "Monthly Rent" && p.month === currentMonthStr) 
+                ? `NOTICE: Your rent for ${currentMonthStr} is currently ${myPayments.find(p => p.type === "Monthly Rent" && p.month === currentMonthStr)?.status.toLowerCase()}.` 
+                : `NOTICE: No payment record found for your ${currentMonthStr} rent.`}
+            </span>
+            <Button size="sm" className="ml-auto bg-amber-500 text-white h-7 px-3 text-[10px] font-bold" onClick={() => setPayModalOpen(true)}>
+              Pay Now
+            </Button>
+          </div>
+        )}
+
+        {isBoarder && myOverduePayments.length === 0 && hasPaidCurrentMonth && myUpcomingPayments.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-600 dark:text-blue-400 font-bold animate-in fade-in slide-in-from-top-2 relative overflow-hidden">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-[11px]">REMINDER: You have {myUpcomingPayments.length} upcoming bill(s). Next due in 3 days.</span>
+            <Button size="sm" className="ml-auto bg-blue-500 text-white h-7 px-3 text-[10px] font-bold" onClick={() => setPayModalOpen(true)}>
+              View Bill
             </Button>
           </div>
         )}
