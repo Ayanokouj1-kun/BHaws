@@ -386,7 +386,7 @@ const PaymentsPage = () => {
                 <TableHead className="text-[11px] whitespace-nowrap px-4">Total</TableHead>
                 <TableHead className="text-[11px] whitespace-nowrap px-4">Received By</TableHead>
                 <TableHead className="text-[11px] whitespace-nowrap px-4">Status</TableHead>
-                <TableHead className="w-[170px] text-right text-[11px]">Actions</TableHead>
+                <TableHead className="w-[170px] text-center text-[11px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -441,8 +441,8 @@ const PaymentsPage = () => {
                       {p.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex gap-1 items-center justify-end flex-nowrap">
+                  <TableCell className="text-center whitespace-nowrap">
+                    <div className="flex gap-1 items-center justify-center flex-nowrap">
                       <Button
                         variant="ghost"
                         size="icon"
