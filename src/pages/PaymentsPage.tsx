@@ -371,31 +371,31 @@ const PaymentsPage = () => {
         </div>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-          <Table>
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="text-[11px]">Receipt #</TableHead>
-                <TableHead className="text-[11px]">Boarder</TableHead>
-                <TableHead className="text-[11px] whitespace-nowrap">Type</TableHead>
-                <TableHead className="text-[11px]">Period</TableHead>
-                <TableHead className="text-[11px]">Due Date</TableHead>
-                <TableHead className="text-[11px]">Date Paid</TableHead>
-                <TableHead className="text-[11px]">Method</TableHead>
-                <TableHead className="text-[11px]">Amount</TableHead>
-                <TableHead className="text-[11px]">Late Fee</TableHead>
-                <TableHead className="text-[11px]">Total</TableHead>
-                <TableHead className="text-[11px] whitespace-nowrap">Received By</TableHead>
-                <TableHead className="text-[11px]">Status</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Receipt #</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Boarder</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Type</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Period</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Due Date</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Date Paid</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Method</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Amount</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Late Fee</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Total</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Received By</TableHead>
+                <TableHead className="text-[11px] whitespace-nowrap px-4">Status</TableHead>
                 <TableHead className="w-[170px] text-right text-[11px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((p) => (
                 <TableRow key={p.id} className="hover:bg-muted/30 group">
-                  <TableCell className="font-mono text-[10px] text-muted-foreground uppercase max-w-[90px] truncate">
+                  <TableCell className="font-mono text-[10px] text-muted-foreground uppercase whitespace-nowrap px-4">
                     {p.receiptNumber}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap min-w-[180px]">
+                  <TableCell className="whitespace-nowrap px-4">
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 shrink-0 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent text-[11px] font-bold overflow-hidden shadow-sm">
                         {boarders.find(b => b.id === p.boarderId)?.profilePhoto ? (
@@ -409,35 +409,35 @@ const PaymentsPage = () => {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/50 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap px-4">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/50">
                       {p.type}
                     </span>
                   </TableCell>
-                  <TableCell className="text-[11px]">{p.month}</TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap">
+                  <TableCell className="text-[11px] whitespace-nowrap px-4">{p.month}</TableCell>
+                  <TableCell className="text-[11px] whitespace-nowrap px-4">
                     {p.dueDate || "—"}
                   </TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap">
+                  <TableCell className="text-[11px] whitespace-nowrap px-4">
                     {p.paidDate || (p.status === "Paid" ? "—" : "—")}
                   </TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap">
+                  <TableCell className="text-[11px] whitespace-nowrap px-4">
                     {p.method || "Cash"}
                   </TableCell>
-                  <TableCell className="font-semibold text-[12px] whitespace-nowrap">
+                  <TableCell className="font-semibold text-[12px] whitespace-nowrap px-4 text-right">
                     ₱{p.amount.toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap">
+                  <TableCell className="text-[11px] whitespace-nowrap px-4 text-right">
                     ₱{(p.lateFee || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="font-semibold text-[12px] whitespace-nowrap">
+                  <TableCell className="font-semibold text-[12px] whitespace-nowrap px-4 text-right text-accent">
                     ₱{(p.amount + (p.lateFee || 0)).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-[11px] whitespace-nowrap max-w-[120px] truncate">
+                  <TableCell className="text-[11px] whitespace-nowrap px-4">
                     {p.receivedBy || "Administrator"}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`${statusStyle(p.status)} font-bold text-[10px] uppercase tracking-wider`}>
+                  <TableCell className="px-4">
+                    <Badge variant="outline" className={`${statusStyle(p.status)} font-bold text-[10px] uppercase tracking-wider whitespace-nowrap`}>
                       {p.status}
                     </Badge>
                   </TableCell>
