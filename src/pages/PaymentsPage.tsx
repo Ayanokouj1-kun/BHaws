@@ -21,6 +21,7 @@ const PaymentsPage = () => {
   const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date-desc");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [viewPayment, setViewPayment] = useState<Payment | null>(null);
@@ -105,9 +106,29 @@ const PaymentsPage = () => {
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   }).sort((a, b) => {
-    const dateA = new Date(a.paidDate || a.date || 0).getTime();
-    const dateB = new Date(b.paidDate || b.date || 0).getTime();
-    return dateB - dateA;
+    if (sortBy === "date-desc") {
+      const dateA = new Date(a.paidDate || a.date || 0).getTime();
+      const dateB = new Date(b.paidDate || b.date || 0).getTime();
+      return dateB - dateA;
+    }
+    if (sortBy === "date-asc") {
+      const dateA = new Date(a.paidDate || a.date || 0).getTime();
+      const dateB = new Date(b.paidDate || b.date || 0).getTime();
+      return dateA - dateB;
+    }
+    if (sortBy === "amount-desc") return b.amount - a.amount;
+    if (sortBy === "amount-asc") return a.amount - b.amount;
+    if (sortBy === "name-asc") {
+      const nameA = boarders.find(b => b.id === a.boarderId)?.fullName || "";
+      const nameB = boarders.find(b => b.id === b.boarderId)?.fullName || "";
+      return nameA.localeCompare(nameB);
+    }
+    if (sortBy === "name-desc") {
+      const nameA = boarders.find(b => b.id === a.boarderId)?.fullName || "";
+      const nameB = boarders.find(b => b.id === b.boarderId)?.fullName || "";
+      return nameB.localeCompare(nameA);
+    }
+    return 0;
   });
 
   const statusStyle = (s: string) =>
@@ -327,6 +348,20 @@ const PaymentsPage = () => {
               <SelectItem value="Paid">Paid</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Newest First</SelectItem>
+              <SelectItem value="date-asc">Oldest First</SelectItem>
+              <SelectItem value="amount-desc">Highest Amount</SelectItem>
+              <SelectItem value="amount-asc">Lowest Amount</SelectItem>
+              <SelectItem value="name-asc">Boarder (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Boarder (Z-A)</SelectItem>
             </SelectContent>
           </Select>
         </div>

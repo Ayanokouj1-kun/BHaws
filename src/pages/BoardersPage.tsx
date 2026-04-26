@@ -18,6 +18,7 @@ const BoardersPage = () => {
   const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("name-asc");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,13 +66,21 @@ const BoardersPage = () => {
   };
 
   const filtered = useMemo(() => {
-    return boarders.filter(b => {
-      const matchesSearch = b.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        b.email.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || b.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [boarders, search, statusFilter]);
+    return boarders
+      .filter(b => {
+        const matchesSearch = b.fullName.toLowerCase().includes(search.toLowerCase()) ||
+          b.email.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus = statusFilter === "all" || b.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (sortBy === "name-asc") return a.fullName.localeCompare(b.fullName);
+        if (sortBy === "name-desc") return b.fullName.localeCompare(a.fullName);
+        if (sortBy === "date-asc") return new Date(a.moveInDate).getTime() - new Date(b.moveInDate).getTime();
+        if (sortBy === "date-desc") return new Date(b.moveInDate).getTime() - new Date(a.moveInDate).getTime();
+        return 0;
+      });
+  }, [boarders, search, statusFilter, sortBy]);
 
   const getRoomName = (roomId: string) => {
     return rooms.find(r => r.id === roomId)?.name ?? "—";
@@ -190,6 +199,18 @@ const BoardersPage = () => {
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Inactive">Inactive</SelectItem>
               <SelectItem value="Evicted">Evicted</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[160px] bg-card border-border/60">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              <SelectItem value="date-desc">Newest First</SelectItem>
+              <SelectItem value="date-asc">Oldest First</SelectItem>
             </SelectContent>
           </Select>
         </div>
