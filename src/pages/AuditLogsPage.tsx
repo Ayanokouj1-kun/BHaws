@@ -121,17 +121,6 @@ const AuditLogsPage = () => {
             <h1 className="page-header">Audit Logs</h1>
             <p className="page-subtitle">Track every change and action within the system</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleSyncLogs} disabled={isSyncing}>
-              <Clock className="h-4 w-4" /> {isSyncing ? "Syncing..." : "Sync Logs"}
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExportLogs("CSV")}>
-              <ArrowDownToLine className="h-4 w-4" /> CSV
-            </Button>
-            <Button size="sm" className="gap-2" onClick={() => handleExportLogs("PDF")}>
-              <ArrowDownToLine className="h-4 w-4" /> PDF
-            </Button>
-          </div>
         </div>
 
         {/* ── Filter Bar ── */}
