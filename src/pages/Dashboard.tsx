@@ -3,7 +3,7 @@ import {
   Users, Building2, PhilippinePeso, TrendingUp, TrendingDown,
   Home, CreditCard, Settings, Clock, User as UserIcon,
   Wrench, AlertCircle, AlertTriangle, CheckCircle2, Receipt, Bell, Plus,
-  Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2
+  Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2, Printer
 } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import {
@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { generateTenantPaymentReportPDF } from "@/utils/pdfGenerator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState as useReactState } from "react";
@@ -494,6 +495,36 @@ const Dashboard = () => {
                   </Button>
                   <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => navigate("/payments")}>
                     <Receipt className="h-4 w-4 text-success" /> View My Payments
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start gap-3 h-12"
+                    disabled={!myProfile}
+                    onClick={() => {
+                      if (!myProfile) return;
+                      generateTenantPaymentReportPDF({
+                        boarder: {
+                          id: myProfile.id,
+                          fullName: myProfile.fullName,
+                          contactNumber: myProfile.contactNumber || "",
+                          email: myProfile.email || "",
+                          address: myProfile.address || "",
+                          moveInDate: myProfile.moveInDate || "",
+                          advanceAmount: myProfile.advanceAmount || 0,
+                          depositAmount: myProfile.depositAmount || 0,
+                          status: myProfile.status,
+                          gender: myProfile.gender,
+                        },
+                        payments: myPayments,
+                        roomName: myRoom?.name || "—",
+                        bedName: myBed?.name || "—",
+                        houseName: settings.name,
+                        houseAddress: settings.address,
+                        houseContact: settings.contact,
+                      });
+                    }}
+                  >
+                    <Printer className="h-4 w-4 text-accent" /> Print Payment History
                   </Button>
                 </CardContent>
               </Card>
