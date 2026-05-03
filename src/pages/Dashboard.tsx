@@ -36,6 +36,7 @@ const Dashboard = () => {
   const [qrZoomed, setQrZoomed] = useReactState(false);
   const [copied, setCopied] = useReactState(false);
   const [overdueWarningOpen, setOverdueWarningOpen] = useReactState(false);
+  const [printingHistory, setPrintingHistory] = useReactState(false);
 
   useEffect(() => {
     document.title = "BHaws Management and Monitoring System Dashboard";
@@ -499,32 +500,41 @@ const Dashboard = () => {
                   <Button
                     variant="outline"
                     className="justify-start gap-3 h-12"
-                    disabled={!myProfile}
+                    disabled={!myProfile || printingHistory}
                     onClick={() => {
-                      if (!myProfile) return;
-                      generateTenantPaymentReportPDF({
-                        boarder: {
-                          id: myProfile.id,
-                          fullName: myProfile.fullName,
-                          contactNumber: myProfile.contactNumber || "",
-                          email: myProfile.email || "",
-                          address: myProfile.address || "",
-                          moveInDate: myProfile.moveInDate || "",
-                          advanceAmount: myProfile.advanceAmount || 0,
-                          depositAmount: myProfile.depositAmount || 0,
-                          status: myProfile.status,
-                          gender: myProfile.gender,
-                        },
-                        payments: myPayments,
-                        roomName: myRoom?.name || "—",
-                        bedName: myBed?.name || "—",
-                        houseName: settings.name,
-                        houseAddress: settings.address,
-                        houseContact: settings.contact,
-                      });
+                      if (!myProfile || printingHistory) return;
+                      setPrintingHistory(true);
+                      setTimeout(() => {
+                        try {
+                          generateTenantPaymentReportPDF({
+                            boarder: {
+                              id: myProfile.id,
+                              fullName: myProfile.fullName,
+                              contactNumber: myProfile.contactNumber || "",
+                              email: myProfile.email || "",
+                              address: myProfile.address || "",
+                              moveInDate: myProfile.moveInDate || "",
+                              advanceAmount: myProfile.advanceAmount || 0,
+                              depositAmount: myProfile.depositAmount || 0,
+                              status: myProfile.status,
+                              gender: myProfile.gender,
+                            },
+                            payments: myPayments,
+                            roomName: myRoom?.name || "—",
+                            bedName: myBed?.name || "—",
+                            houseName: settings.name,
+                            houseAddress: settings.address,
+                            houseContact: settings.contact,
+                          });
+                        } finally {
+                          setPrintingHistory(false);
+                        }
+                      }, 50);
                     }}
                   >
-                    <Printer className="h-4 w-4 text-accent" /> Print Payment History
+                    {printingHistory
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF...</>
+                      : <><Printer className="h-4 w-4 text-indigo-500" /> Print Payment History</>}
                   </Button>
                 </CardContent>
               </Card>
