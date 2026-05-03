@@ -663,9 +663,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const deletePayment = async (id: string) => {
         const canWrite = user?.role === "SuperAdmin" || user?.role === "Admin";
         if (!canWrite) { toast.error("Unauthorized"); return; }
+        // Optimistic update — remove immediately so all derived stats refresh at once
+        setPayments(prev => prev.filter(p => p.id !== id));
         const { error } = await supabase.from("payments").delete().eq("id", id);
-        if (error) toast.error("Failed to delete payment");
-        else {
+        if (error) {
+            toast.error("Failed to delete payment");
+            refreshData(); // rollback by re-fetching real state
+        } else {
             toast.success("Payment deleted");
             addLog("Payment Deleted", "Payment", id, `Payment record ID ${id} was deleted.`);
             refreshData();

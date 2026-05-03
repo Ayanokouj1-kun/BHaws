@@ -119,13 +119,13 @@ const PaymentsPage = () => {
     if (sortBy === "amount-desc") return b.amount - a.amount;
     if (sortBy === "amount-asc") return a.amount - b.amount;
     if (sortBy === "name-asc") {
-      const nameA = boarders.find(b => b.id === a.boarderId)?.fullName || "";
-      const nameB = boarders.find(b => b.id === b.boarderId)?.fullName || "";
+      const nameA = boarders.find(br => br.id === a.boarderId)?.fullName || "";
+      const nameB = boarders.find(br => br.id === b.boarderId)?.fullName || "";
       return nameA.localeCompare(nameB);
     }
     if (sortBy === "name-desc") {
-      const nameA = boarders.find(b => b.id === a.boarderId)?.fullName || "";
-      const nameB = boarders.find(b => b.id === b.boarderId)?.fullName || "";
+      const nameA = boarders.find(br => br.id === a.boarderId)?.fullName || "";
+      const nameB = boarders.find(br => br.id === b.boarderId)?.fullName || "";
       return nameB.localeCompare(nameA);
     }
     return 0;
@@ -147,8 +147,41 @@ const PaymentsPage = () => {
     return room?.monthlyRate || 0;
   };
 
+  const addDays = (base: string | Date, days: number) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
+  // Compute the next due date by cascading from the furthest paid dueDate,
+  // falling back to boarder's move-in advance credit, then today + 31.
+  const getNextDueDateForBoarder = (boarderId: string): string => {
+    // Find the furthest dueDate among this boarder's paid payments
+    const paidWithDue = payments.filter(p => p.boarderId === boarderId && p.status === "Paid" && p.dueDate);
+    if (paidWithDue.length > 0) {
+      const latestDue = paidWithDue.reduce((max, p) =>
+        new Date(p.dueDate!) > new Date(max) ? p.dueDate! : max,
+        paidWithDue[0].dueDate!
+      );
+      return addDays(latestDue, 31);
+    }
+
+    // No payment records yet — check boarder's move-in advance credit
+    const boarder = boarders.find(b => b.id === boarderId);
+    const rate = boarder?.assignedRoomId
+      ? (rooms.find(r => r.id === boarder.assignedRoomId)?.monthlyRate ?? 0)
+      : 0;
+    const advanceMonths = rate > 0 ? Math.floor((boarder?.advanceAmount ?? 0) / rate) : 0;
+    if (advanceMonths > 0 && boarder?.moveInDate) {
+      return addDays(boarder.moveInDate, (advanceMonths + 1) * 31);
+    }
+
+    // Default fallback
+    return addDays(today, 31);
+  };
+
   const handleOpenAdd = () => {
-    const defaultDue = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
+    const defaultDue = addDays(today, 31);
 
     setMode("add");
     setCurrentPayment({
@@ -242,6 +275,7 @@ const PaymentsPage = () => {
             amount: excess,
             month: "Advance Credit",
             date: paymentData.date,
+            dueDate: addDays(paymentData.dueDate ?? today, 31),
             status: "Paid",
             notes: `Excess payment from ${paymentData.month}.`,
             createdAt: new Date().toISOString(),
@@ -284,6 +318,7 @@ const PaymentsPage = () => {
             type: "Advance",
             amount: excess,
             month: "Advance Credit",
+            dueDate: addDays(paymentData.dueDate ?? today, 31),
             status: "Paid",
             notes: `Excess payment from ${paymentData.month}.`,
             createdAt: new Date().toISOString(),
@@ -551,7 +586,7 @@ const PaymentsPage = () => {
                         const monthIdx = months.indexOf(m);
                         const yearNum = parseInt(y) || new Date().getFullYear();
                         const billingDate = new Date(yearNum, monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                        const dueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
+                        const dueDate = getNextDueDateForBoarder(val);
 
                         setCurrentPayment({ 
                           ...currentPayment, 
@@ -637,7 +672,7 @@ const PaymentsPage = () => {
                             const yearToUse = yearPart || new Date().getFullYear().toString();
                             const monthIdx = months.indexOf(val);
                             const billingDate = new Date(parseInt(yearToUse), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                            const newDueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
+                            const newDueDate = currentPayment.boarderId ? getNextDueDateForBoarder(currentPayment.boarderId) : addDays(today, 31);
                             setCurrentPayment({ ...currentPayment, month: `${val} ${yearToUse}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
@@ -660,7 +695,7 @@ const PaymentsPage = () => {
                               monthPart || new Date().toLocaleString("default", { month: "long" });
                             const monthIdx = months.indexOf(monthToUse);
                             const billingDate = new Date(parseInt(val), monthIdx !== -1 ? monthIdx : new Date().getMonth(), 1).toISOString().split('T')[0];
-                            const newDueDate = new Date(new Date().setDate(new Date().getDate() + 31)).toISOString().split('T')[0];
+                            const newDueDate = currentPayment.boarderId ? getNextDueDateForBoarder(currentPayment.boarderId) : addDays(today, 31);
                             setCurrentPayment({ ...currentPayment, month: `${monthToUse} ${val}`, date: billingDate, dueDate: newDueDate });
                           }}
                         >
@@ -828,9 +863,14 @@ const PaymentsPage = () => {
                         <Input
                           type="date"
                           value={currentPayment.paidDate || ""}
-                          onChange={(e) =>
-                            setCurrentPayment({ ...currentPayment, paidDate: e.target.value })
-                          }
+                          onChange={(e) => {
+                            const paid = e.target.value;
+                            setCurrentPayment({
+                              ...currentPayment,
+                              paidDate: paid,
+                              dueDate: paid ? addDays(paid, 31) : currentPayment.dueDate,
+                            });
+                          }}
                         />
                       </div>
                     )}

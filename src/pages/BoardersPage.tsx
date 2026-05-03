@@ -13,19 +13,23 @@ import { Boarder } from "@/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
+type BoarderFormData = Partial<Boarder> & { createAccount?: boolean; username?: string };
+
 const BoardersPage = () => {
   const { boarders, rooms, profiles, payments, addBoarder, updateBoarder, deleteBoarder, addUser, isLoading, user } = useData();
   const isAdmin = user?.role === "Admin" || user?.role === "SuperAdmin";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name-asc");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const currentMonthStr = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+  const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
-  const [currentBoarder, setCurrentBoarder] = useState<Partial<Boarder>>({
+  const [currentBoarder, setCurrentBoarder] = useState<BoarderFormData>({
     fullName: "",
     contactNumber: "",
     email: "",
@@ -71,7 +75,15 @@ const BoardersPage = () => {
         const matchesSearch = b.fullName.toLowerCase().includes(search.toLowerCase()) ||
           b.email.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === "all" || b.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        let matchesPayment = true;
+        if (paymentFilter === "unpaid") {
+          const bPayments = payments.filter(p => p.boarderId === b.id);
+          const hasUnpaid = bPayments.some(p => p.status === "Overdue" || p.status === "Pending" || p.status === "Unpaid");
+          const hasAdvanceCredit = (b.advanceAmount ?? 0) > 0 ||
+            bPayments.some(p => (p.type === "Advance" || p.type === "Deposit" || p.type === "Security Deposit") && p.status === "Paid");
+          matchesPayment = (bPayments.length === 0 && !hasAdvanceCredit) || hasUnpaid;
+        }
+        return matchesSearch && matchesStatus && matchesPayment;
       })
       .sort((a, b) => {
         if (sortBy === "name-asc") return a.fullName.localeCompare(b.fullName);
@@ -80,7 +92,7 @@ const BoardersPage = () => {
         if (sortBy === "date-desc") return new Date(b.moveInDate).getTime() - new Date(a.moveInDate).getTime();
         return 0;
       });
-  }, [boarders, search, statusFilter, sortBy]);
+  }, [boarders, search, statusFilter, sortBy, paymentFilter, payments]);
 
   const getRoomName = (roomId: string) => {
     return rooms.find(r => r.id === roomId)?.name ?? "—";
@@ -127,13 +139,13 @@ const BoardersPage = () => {
         id: `bo${Date.now()}`,
         createdAt: new Date().toISOString().split('T')[0],
       };
-      addBoarder(boarder).then((nb) => {
-        if (currentBoarder.createAccount && currentBoarder.username && nb) {
+      addBoarder(boarder).then(() => {
+        if (currentBoarder.createAccount && currentBoarder.username) {
           addUser({
             username: currentBoarder.username,
             fullName: boarder.fullName,
             role: "Boarder",
-            boarderId: nb.id,
+            boarderId: boarder.id,
           });
         }
       });
@@ -202,6 +214,16 @@ const BoardersPage = () => {
             </SelectContent>
           </Select>
 
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-[160px] bg-card border-border/60">
+              <SelectValue placeholder="Payment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payments</SelectItem>
+              <SelectItem value="unpaid">Unpaid / No Record</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[160px] bg-card border-border/60">
               <SelectValue placeholder="Sort By" />
@@ -265,7 +287,10 @@ const BoardersPage = () => {
                              <span className="text-[8px] font-bold text-destructive uppercase tracking-wider">Overdue Payment</span>
                            </div>
                         )}
-                        {!payments.some(p => p.boarderId === b.id && p.status === "Overdue") && !payments.some(p => p.boarderId === b.id && p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid") && (
+                        {!payments.some(p => p.boarderId === b.id && p.status === "Overdue") &&
+                         !payments.some(p => p.boarderId === b.id && p.type === "Monthly Rent" && p.month === currentMonthStr && p.status === "Paid") &&
+                         (b.advanceAmount ?? 0) <= 0 &&
+                         !payments.some(p => p.boarderId === b.id && p.type === "Advance" && p.status === "Paid" && p.dueDate && p.dueDate >= currentMonthStart) && (
                            <div className="flex items-center gap-1 mt-1">
                              <Clock className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
                              <span className="text-[8px] font-bold text-amber-500 uppercase tracking-wider">Unpaid This Month</span>
@@ -530,8 +555,13 @@ const BoardersPage = () => {
                     </Label>
                     <Input
                       value={currentBoarder.contactNumber}
-                      onChange={(e) => setCurrentBoarder({ ...currentBoarder, contactNumber: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                        setCurrentBoarder({ ...currentBoarder, contactNumber: val });
+                      }}
                       placeholder="09XXXXXXXXX"
+                      inputMode="numeric"
+                      maxLength={11}
                       className="h-9 px-3 text-xs bg-card"
                     />
                   </div>

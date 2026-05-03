@@ -18,13 +18,14 @@ import {
     AlertCircle,
     PhilippinePeso
 } from "lucide-react";
+import { generateTenantPaymentReportPDF } from "@/utils/pdfGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const BoarderDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { boarders, rooms, payments, isLoading, user } = useData();
+    const { boarders, rooms, payments, isLoading, user, settings } = useData();
     const role = user?.role || "Boarder";
 
     const boarder = boarders.find((b) => b.id === id);
@@ -59,6 +60,19 @@ const BoarderDetails = () => {
 
     const [emergencyName, emergencyInfo] = (boarder?.emergencyContact || "").split(" - ");
 
+    const handlePrintReport = () => {
+        if (!boarder) return;
+        generateTenantPaymentReportPDF({
+            boarder,
+            payments: boarderPayments,
+            roomName: room?.name || "N/A",
+            bedName: bed?.name || "N/A",
+            houseName: settings.name,
+            houseAddress: settings.address,
+            houseContact: settings.contact,
+        });
+    };
+
     const totalAdvancePaid = boarderPayments
         .filter(p => p.type?.toLowerCase().includes("advance") && p.status === "Paid")
         .reduce((sum, p) => sum + p.amount, 0);
@@ -77,10 +91,15 @@ const BoarderDetails = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/boarders")}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
-                    <div>
+                    <div className="flex-1 min-w-0">
                         <h1 className="text-xl font-black tracking-tight">{boarder.fullName}</h1>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Profile & Payment History</p>
                     </div>
+                    {(role === "Admin" || role === "SuperAdmin" || role === "Staff") && (
+                        <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handlePrintReport}>
+                            <Printer className="h-4 w-4" /> Print Report
+                        </Button>
+                    )}
                 </div>
 
                 {overduePayments.length > 0 && (

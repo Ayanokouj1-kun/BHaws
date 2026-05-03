@@ -2,15 +2,17 @@
 import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/hooks/useData";
-import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, PhilippinePeso, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileBarChart, Users, DoorOpen, CreditCard, TrendingUp, Download, Calendar, ArrowRight, ShieldCheck, PhilippinePeso, Search, ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
-import { generatePDF } from "@/utils/pdfGenerator";
+import { generatePDF, generateFinancialSummaryPDF } from "@/utils/pdfGenerator";
 import { generateCSV } from "@/utils/csvGenerator";
 
 type ReportType = "summary" | "income" | "unpaid" | "occupancy" | "history";
@@ -21,6 +23,44 @@ const ReportsPage = () => {
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPerPage, setHistoryPerPage] = useState(25);
   const [historySearch, setHistorySearch] = useState("");
+
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [printPeriodType, setPrintPeriodType] = useState<"monthly" | "yearly">("monthly");
+  const [printMonth, setPrintMonth] = useState(() =>
+    new Date().toLocaleString("default", { month: "long", year: "numeric" })
+  );
+  const [printYear, setPrintYear] = useState(String(new Date().getFullYear()));
+
+  const availableMonths = useMemo(() => {
+    const s = new Set<string>();
+    payments.forEach(p => { if (p.month) s.add(p.month); });
+    return Array.from(s).sort();
+  }, [payments]);
+
+  const availableYears = useMemo(() => {
+    const s = new Set<string>();
+    payments.forEach(p => {
+      const y = p.month?.split(" ").pop();
+      if (y) s.add(y);
+    });
+    s.add(String(new Date().getFullYear()));
+    return Array.from(s).sort().reverse();
+  }, [payments]);
+
+  const handlePrintSummary = () => {
+    const periodLabel = printPeriodType === "monthly" ? printMonth : printYear;
+    generateFinancialSummaryPDF({
+      boarders,
+      payments,
+      period: printPeriodType,
+      periodLabel,
+      houseName: settings.name,
+      houseAddress: settings.address,
+      houseContact: settings.contact,
+    });
+    setIsPrintOpen(false);
+    toast.success("Financial Summary Report generated");
+  };
 
   const role = user?.role || "Boarder";
 
@@ -120,6 +160,7 @@ const ReportsPage = () => {
   if (isLoading) return <AppLayout><div className="flex items-center justify-center h-full">Loading...</div></AppLayout>;
 
   return (
+    <>
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -128,6 +169,11 @@ const ReportsPage = () => {
             <p className="page-subtitle">Track your revenue, occupancy, and collection history</p>
           </div>
           <div className="flex gap-2">
+            {(role === "Admin" || role === "SuperAdmin") && (
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => setIsPrintOpen(true)}>
+                <Printer className="h-4 w-4" /> Print Summary
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => handleExport("CSV")}>
               <Download className="h-4 w-4" /> CSV
             </Button>
@@ -538,6 +584,80 @@ const ReportsPage = () => {
         </div>
       </div>
     </AppLayout>
+
+      {/* Print Summary Dialog */}
+      <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <Printer className="h-4 w-4 text-accent" /> Print Financial Summary Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid gap-1.5">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Report Period</Label>
+              <Select value={printPeriodType} onValueChange={(v: "monthly" | "yearly") => setPrintPeriodType(v)}>
+                <SelectTrigger className="h-9 text-sm bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly View</SelectItem>
+                  <SelectItem value="yearly">Yearly View</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {printPeriodType === "monthly" && (
+              <div className="grid gap-1.5">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select Month</Label>
+                <Select value={printMonth} onValueChange={setPrintMonth}>
+                  <SelectTrigger className="h-9 text-sm bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {availableMonths.length > 0 ? (
+                      availableMonths.map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value={printMonth}>{printMonth}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-[9px] text-muted-foreground">Showing data for the selected month only</p>
+              </div>
+            )}
+
+            {printPeriodType === "yearly" && (
+              <div className="grid gap-1.5">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select Year</Label>
+                <Select value={printYear} onValueChange={setPrintYear}>
+                  <SelectTrigger className="h-9 text-sm bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map(y => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[9px] text-muted-foreground">Showing full-year data aggregated by month</p>
+              </div>
+            )}
+
+            <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-[10px] text-muted-foreground">
+              Report will include: <strong>Total Income</strong>, <strong>Total Paid</strong>, <strong>Total Unpaid</strong>, and a per-boarder breakdown.
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsPrintOpen(false)}>Cancel</Button>
+            <Button size="sm" className="gap-2" onClick={handlePrintSummary}>
+              <Printer className="h-3.5 w-3.5" /> Generate PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
