@@ -3,7 +3,8 @@ import {
   Users, Building2, PhilippinePeso, TrendingUp, TrendingDown,
   Home, CreditCard, Settings, Clock, User as UserIcon,
   Wrench, AlertCircle, AlertTriangle, CheckCircle2, Receipt, Bell, Plus,
-  Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2, Printer
+  Download, ArrowUpRight, ArrowDownRight, Smartphone, QrCode, CreditCard as CardIcon, Copy, Loader2, Check, Maximize2, Printer,
+  Activity, ShieldCheck, PieChart as PieIcon
 } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import {
@@ -151,6 +152,10 @@ const Dashboard = () => {
     const openMaintenance = maintenance.filter(m => m.status === "Open" || m.status === "In Progress").length;
     const urgentMaintenance = maintenance.filter(m => m.priority === "Urgent" && m.status !== "Resolved" && m.status !== "Closed").length;
 
+    const collectionHealth = payments.length > 0 
+      ? Math.round((paidPayments.length / payments.length) * 100) 
+      : 0;
+
     return {
       activeBoarders, totalBoarders: boarders.length,
       occupiedBeds, totalBeds, occupancyPct, availableRooms, lockedRooms,
@@ -163,6 +168,7 @@ const Dashboard = () => {
       unpaidCount: unpaidPayments.length,
       paidCount: paidPayments.length,
       openMaintenance, urgentMaintenance,
+      collectionHealth
     };
   }, [rooms, boarders, payments, expenses, maintenance]);
 
@@ -722,36 +728,96 @@ const Dashboard = () => {
               {/* Sidebar: Payment Status + Quick Actions */}
               <div className="space-y-4">
 
-                {/* Payment status bar chart */}
-                <Card className="border-border/60 shadow-sm">
+                {/* Payment status Donut Chart — Enhanced */}
+                <Card className="border-border/60 shadow-sm glass-card overflow-hidden relative group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <PieIcon className="h-12 w-12 text-accent" />
+                  </div>
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm font-bold">Payment Status</CardTitle>
-                    <p className="text-xs text-muted-foreground">{payments.length} total records</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-accent" />
+                          Collection Health
+                        </CardTitle>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{payments.length} payment records processed</p>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[9px] font-black tracking-tighter uppercase px-1.5 py-0.5 border-none ${
+                          stats.collectionHealth >= 90 ? "bg-success text-white" : 
+                          stats.collectionHealth >= 70 ? "bg-warning text-white" : 
+                          "bg-destructive text-white animate-pulse"
+                        }`}
+                      >
+                        {stats.collectionHealth >= 90 ? "Excellent" : stats.collectionHealth >= 70 ? "Good" : "Action Required"}
+                      </Badge>
+                    </div>
                   </CardHeader>
-                  <CardContent className="pt-4">
-                    <ResponsiveContainer width="100%" height={110}>
-                      <BarChart data={paymentBreakdown} barSize={28} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                        <Tooltip
-                          cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }}
-                          contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }}
-                          formatter={(v: number) => [v, "Records"]}
-                        />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                          {paymentBreakdown.map((entry, i) => (
-                            <rect key={i} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="grid grid-cols-3 gap-2 mt-3">
-                      {paymentBreakdown.map(item => (
-                        <div key={item.label} className="text-center">
-                          <p className="text-base font-bold text-foreground">{item.value}</p>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                  <CardContent className="pt-6">
+                    <div className="relative h-[140px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={paymentBreakdown}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={65}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {paymentBreakdown.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ borderRadius: "12px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: "11px", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center Label */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-black text-foreground tracking-tighter">{stats.collectionHealth}%</span>
+                        <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Health Index</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-6">
+                      {paymentBreakdown.map((item, idx) => (
+                        <div key={item.label} className="flex items-center gap-2 group/item cursor-default">
+                          <div className="h-2 w-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.fill }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">{item.label}</span>
+                              <span className="text-[10px] font-black text-foreground">{Math.round((item.value / (payments.length || 1)) * 100)}%</span>
+                            </div>
+                            <div className="h-1 w-full bg-muted rounded-full mt-1 overflow-hidden">
+                              <div 
+                                className="h-full rounded-full transition-all duration-1000 ease-out" 
+                                style={{ 
+                                  backgroundColor: item.fill, 
+                                  width: `${(item.value / (payments.length || 1)) * 100}%`,
+                                  transitionDelay: `${idx * 150}ms`
+                                }} 
+                              />
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
+                    
+                    {stats.overdueCount > 0 && (
+                      <div className="mt-5 p-2 rounded-xl bg-destructive/5 border border-destructive/10 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="h-6 w-6 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="h-3 w-3 text-destructive" />
+                        </div>
+                        <p className="text-[9px] font-semibold text-destructive leading-tight">
+                          Critical: {stats.overdueCount} boarder(s) have not settled their bills. ₱{stats.overdueTotal.toLocaleString()} at risk.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -919,32 +985,48 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Chart 4 — Boarder Payment Health */}
-                <Card className="border-border/60 shadow-sm">
+                {/* Chart 4 — Boarder Payment Health — Enhanced */}
+                <Card className="border-border/60 shadow-sm glass-card overflow-hidden relative group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <ShieldCheck className="h-12 w-12 text-success" />
+                  </div>
                   <CardHeader className="pb-1">
-                    <CardTitle className="text-sm font-bold">Payment Health</CardTitle>
-                    <p className="text-[10px] text-muted-foreground">Per boarder — paid vs overdue</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                          <Users className="h-4 w-4 text-success" />
+                          Boarder Health
+                        </CardTitle>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Payment reliability by boarder</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] font-bold text-success border-success/30 bg-success/5">
+                        {boarderPaymentHealth.length} Active
+                      </Badge>
+                    </div>
                   </CardHeader>
-                  <CardContent className="pt-1">
+                  <CardContent className="pt-2">
                     {boarderPaymentHealth.length === 0 ? (
                       <div className="h-40 flex items-center justify-center text-xs text-muted-foreground italic">No active boarders with payments.</div>
                     ) : (
                       <>
                         <ResponsiveContainer width="100%" height={160}>
-                          <BarChart data={boarderPaymentHealth} barSize={10} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                            <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={42} />
+                          <BarChart data={boarderPaymentHealth} barSize={8} layout="vertical" margin={{ top: 0, right: 15, left: -10, bottom: 0 }}>
+                            <XAxis type="number" hide />
+                            <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--foreground))" }} width={55} />
                             <Tooltip
-                              contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 11 }}
+                              cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+                              contentStyle={{ borderRadius: "10px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: "11px" }}
                             />
-                            <Legend wrapperStyle={{ fontSize: 9, paddingTop: 4 }} />
                             <Bar dataKey="paid" name="Paid" stackId="a" fill="hsl(var(--success))" radius={[0, 0, 0, 0]} />
                             <Bar dataKey="pending" name="Pending" stackId="a" fill="hsl(var(--warning))" />
                             <Bar dataKey="overdue" name="Overdue" stackId="a" fill="hsl(var(--destructive))" radius={[0, 3, 3, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
-                        <div className="mt-2 p-2 rounded-lg bg-warning/5 border border-warning/20">
-                          <p className="text-[10px] text-warning leading-relaxed">{overdueInsight}</p>
+                        <div className="mt-3 p-2.5 rounded-xl bg-muted/40 border border-border/50 backdrop-blur-sm">
+                          <div className="flex gap-2">
+                            <Activity className="h-3 w-3 text-warning shrink-0 mt-0.5" />
+                            <p className="text-[10px] font-medium text-foreground leading-tight italic">{overdueInsight}</p>
+                          </div>
                         </div>
                       </>
                     )}
