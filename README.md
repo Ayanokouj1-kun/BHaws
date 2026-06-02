@@ -1,0 +1,66 @@
+<div align="center">
+
+# Boarding House Management and Monitoring System
+
+> 
+
+</div>
+
+## Description
+
+A full-stack Boarding House Management and Monitoring System featuring tenant registration, room management, payment tracking, occupancy monitoring, and reporting tools.
+
+## Tech Stack
+
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodejs&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
+## Usage
+
+Start the local development server to run the application:
+
+```bash
+npm run dev
+```
+
+## Project Structure
+
+```text
+BHaws/
+├── public/
+├── src/
+├── .gitignore
+├── bun.lockb
+├── components.json
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── system_summary.md
+├── tailwind.config.ts
+├── tsconfig.app.json
+├── tsconfig.json
+└── tsconfig.node.json
+└── ... (3 more files/directories)
+
+```
+
+Detailed snapshot listing primary directory folders and config points.
+
+## Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+Distributed under the **MIT** License. See `LICENSE` for more information.
+
+Copyright (c) 2026 Ayanokouj1x
+
+<!-- readme-builder-state: W3sidHlwZSI6InRpdGxlIiwidGl0bGUiOiJQcm9qZWN0IFRpdGxlIiwidmlzaWJsZSI6dHJ1ZSwiY29udGVudCI6eyJ0ZXh0IjoiQm9hcmRpbmcgSG91c2UgTWFuYWdlbWVudCBhbmQgTW9uaXRvcmluZyBTeXN0ZW0iLCJzdWJ0aXRsZSI6IiIsImFsaWduIjoiY2VudGVyIiwibG9nb1VybCI6IiIsImxvZ29XaWR0aCI6IjEwMCJ9fSx7InR5cGUiOiJkZXNjcmlwdGlvbiIsInRpdGxlIjoiRGVzY3JpcHRpb24iLCJ2aXNpYmxlIjp0cnVlLCJjb250ZW50Ijp7InRleHQiOiJBIGZ1bGwtc3RhY2sgQm9hcmRpbmcgSG91c2UgTWFuYWdlbWVudCBhbmQgTW9uaXRvcmluZyBTeXN0ZW0gZmVhdHVyaW5nIHRlbmFudCByZWdpc3RyYXRpb24sIHJvb20gbWFuYWdlbWVudCwgcGF5bWVudCB0cmFja2luZywgb2NjdXBhbmN5IG1vbml0b3JpbmcsIGFuZCByZXBvcnRpbmcgdG9vbHMuIn19LHsidHlwZSI6InRlY2gtc3RhY2siLCJ0aXRsZSI6IlRlY2ggU3RhY2siLCJ2aXNpYmxlIjp0cnVlLCJjb250ZW50Ijp7ImJhZGdlcyI6W3sibGFiZWwiOiJOb2RlLmpzIiwibWVzc2FnZSI6Ik5vZGUuanMiLCJjb2xvciI6IjMzOTkzMyIsImxvZ28iOiJub2RlanMifSx7ImxhYmVsIjoiVGFpbHdpbmQgQ1NTIiwibWVzc2FnZSI6IlRhaWx3aW5kQ1NTIiwiY29sb3IiOiIwNkI2RDQiLCJsb2dvIjoidGFpbHdpbmRjc3MifSx7ImxhYmVsIjoiVml0ZSIsIm1lc3NhZ2UiOiJWaXRlIiwiY29sb3IiOiI2NDZDRkYiLCJsb2dvIjoidml0ZSJ9LHsibGFiZWwiOiJUeXBlU2NyaXB0IiwibWVzc2FnZSI6IlR5cGVTY3JpcHQiLCJjb2xvciI6IjMxNzhDNiIsImxvZ28iOiJ0eXBlc2NyaXB0In0seyJsYWJlbCI6IlJlYWN0IiwibWVzc2FnZSI6IlJlYWN0IiwiY29sb3IiOiI2MURBRkIiLCJsb2dvIjoicmVhY3QifSx7ImxhYmVsIjoiU3VwYWJhc2UiLCJtZXNzYWdlIjoiU3VwYWJhc2UiLCJjb2xvciI6IjNFQ0Y4RSIsImxvZ28iOiJzdXBhYmFzZSJ9LHsibGFiZWwiOiJOZXh0LmpzIiwibWVzc2FnZSI6Ik5leHQuanMiLCJjb2xvciI6IjAwMDAwMCIsImxvZ28iOiJuZXh0LmpzIn0seyJsYWJlbCI6IlZlcmNlbCIsIm1lc3NhZ2UiOiJWZXJjZWwiLCJjb2xvciI6IjAwMDAwMCIsImxvZ28iOiJ2ZXJjZWwifV19fSx7InR5cGUiOiJ1c2FnZSIsInRpdGxlIjoiVXNhZ2UiLCJ2aXNpYmxlIjp0cnVlLCJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiU3RhcnQgdGhlIGxvY2FsIGRldmVsb3BtZW50IHNlcnZlciB0byBydW4gdGhlIGFwcGxpY2F0aW9uOiIsImNvZGVCbG9jayI6Im5wbSBydW4gZGV2IiwibGFuZ3VhZ2UiOiJiYXNoIn19LHsidHlwZSI6ImZvbGRlci1zdHJ1Y3R1cmUiLCJ0aXRsZSI6IkZvbGRlciBTdHJ1Y3R1cmUiLCJ2aXNpYmxlIjp0cnVlLCJjb250ZW50Ijp7InRyZWUiOiJCSGF3cy9cbuKUnOKUgOKUgCBwdWJsaWMvXG7ilJzilIDilIAgc3JjL1xu4pSc4pSA4pSAIC5naXRpZ25vcmVcbuKUnOKUgOKUgCBidW4ubG9ja2JcbuKUnOKUgOKUgCBjb21wb25lbnRzLmpzb25cbuKUnOKUgOKUgCBlc2xpbnQuY29uZmlnLmpzXG7ilJzilIDilIAgaW5kZXguaHRtbFxu4pSc4pSA4pSAIHBhY2thZ2UtbG9jay5qc29uXG7ilJzilIDilIAgcGFja2FnZS5qc29uXG7ilJzilIDilIAgcG9zdGNzcy5jb25maWcuanNcbuKUnOKUgOKUgCBzeXN0ZW1fc3VtbWFyeS5tZFxu4pSc4pSA4pSAIHRhaWx3aW5kLmNvbmZpZy50c1xu4pSc4pSA4pSAIHRzY29uZmlnLmFwcC5qc29uXG7ilJzilIDilIAgdHNjb25maWcuanNvblxu4pSU4pSA4pSAIHRzY29uZmlnLm5vZGUuanNvblxu4pSU4pSA4pSAIC4uLiAoMyBtb3JlIGZpbGVzL2RpcmVjdG9yaWVzKVxuIiwiZXhwbGFuYXRpb24iOiJEZXRhaWxlZCBzbmFwc2hvdCBsaXN0aW5nIHByaW1hcnkgZGlyZWN0b3J5IGZvbGRlcnMgYW5kIGNvbmZpZyBwb2ludHMuIn19LHsidHlwZSI6ImNvbnRyaWJ1dGluZyIsInRpdGxlIjoiQ29udHJpYnV0aW5nIiwidmlzaWJsZSI6dHJ1ZSwiY29udGVudCI6eyJ0ZXh0IjoiQ29udHJpYnV0aW9ucyBhcmUgd2hhdCBtYWtlIHRoZSBvcGVuIHNvdXJjZSBjb21tdW5pdHkgc3VjaCBhbiBhbWF6aW5nIHBsYWNlIHRvIGxlYXJuLCBpbnNwaXJlLCBhbmQgY3JlYXRlLiBBbnkgY29udHJpYnV0aW9ucyB5b3UgbWFrZSBhcmUgKipncmVhdGx5IGFwcHJlY2lhdGVkKiouXG5cbjEuIEZvcmsgdGhlIFByb2plY3RcbjIuIENyZWF0ZSB5b3VyIEZlYXR1cmUgQnJhbmNoIChgZ2l0IGNoZWNrb3V0IC1iIGZlYXR1cmUvQW1hemluZ0ZlYXR1cmVgKVxuMy4gQ29tbWl0IHlvdXIgQ2hhbmdlcyAoYGdpdCBjb21taXQgLW0gJ0FkZCBzb21lIEFtYXppbmdGZWF0dXJlJ2ApXG40LiBQdXNoIHRvIHRoZSBCcmFuY2ggKGBnaXQgcHVzaCBvcmlnaW4gZmVhdHVyZS9BbWF6aW5nRmVhdHVyZWApXG41LiBPcGVuIGEgUHVsbCBSZXF1ZXN0In19LHsidHlwZSI6ImxpY2Vuc2UiLCJ0aXRsZSI6IkxpY2Vuc2UiLCJ2aXNpYmxlIjp0cnVlLCJjb250ZW50Ijp7InR5cGUiOiJNSVQiLCJhdXRob3IiOiJBeWFub2tvdWoxeCIsInllYXIiOiIyMDI2In19XQ== -->
